@@ -26,16 +26,23 @@ class ThreeFiz{
             this.SCENE.add(box.mesh)
             box.collider = new OBB()
         })
+        this.light = new THREE.PointLight(0xFFFFFF,1);
+        this.helplight = new THREE.PointLightHelper(this.light);
+        this.SCENE.add(
+            this.light,
+            this.helplight,
+        )
     }
-    addSphere(mesh, radius, mass){
+    addSphere(mesh, mass){
         let sphere = {
             mesh: mesh,
-            collider: new THREE.Sphere(new THREE.Vector3(0,0,0), radius),
+            collider: new THREE.Sphere(new THREE.Vector3(0,0,0), 0),
             velocity: new THREE.Vector3(),
             force: new THREE.Vector3(),
             mass: mass,
             hit: false
         }
+        sphere.collider.radius = sphere.mesh.geometry.parameters.radius
         this.spheres.push(sphere)
     }
     addBox(mesh, mass) { ////////////////////////
@@ -71,14 +78,17 @@ class ThreeFiz{
             sphere.collider.center.addScaledVector(sphere.velocity.clone(), time/10000);
             const damping = Math.exp( - 1.1 * time/10 ) - 1;
         })
-        this.boxes.forEach((box) => { //////////////////////////
+        this.boxes.forEach((box) => {
             box.mesh.updateMatrix();
             box.mesh.updateMatrixWorld();
+            box.velocity.add(this.GRAVITY.clone())
+            box.mesh.position.addScaledVector(box.velocity.clone(), time/10000);
             box.collider.copy(box.mesh.userData.obb)
-            box.collider.applyMatrix4( box.mesh.matrixWorld ); // WWWWWTTTTFFFFF
+            box.collider.applyMatrix4( box.mesh.matrixWorld );
         })
         this.sphereBoxCollisions()
         this.spheresCollisions()
+        this.boxesCollisions()
         if (this.world) this.worldCollisions(time) // może do update lepiej
     }
     checkCollisions(obj){
@@ -145,6 +155,40 @@ class ThreeFiz{
                     const dot = relativeVelocity.dot(collision.normal)
                     sphere.collider.center.add( collision.normal.clone().multiplyScalar( collision.depth ))
                     sphere.velocity.addScaledVector(collision.normal, -dot * 1.5) // 1.5 to sprężystość, 2 = 100% odbitej energii + damping
+                }
+            })
+        })
+    }
+    boxesCollisions(){
+        this.boxes.forEach((box1, idx1) => {
+            this.boxes.forEach((box2, idx2) => {
+                if(box1 !== box2 && idx2 > idx1){
+                   if(box1.collider.intersectsOBB(box2.collider)){
+                        const box1cp = new THREE.Vector3()
+                        const box2cp = new THREE.Vector3()
+                        box1.collider.clampPoint(box2.collider.center, box1cp)
+                        box2.collider.clampPoint(box1.collider.center, box2cp)
+                        const collision = {
+                            normal: box1.collider.center.clone().sub(box1cp).normalize(),
+                            depth: box1cp.clone().sub(box2cp).length(),
+                        }
+                        const relativeVelocity = box1.velocity.clone().sub(box2.velocity.clone())
+                        const dot = relativeVelocity.dot(collision.normal)
+                        console.log(relativeVelocity.normalize())
+                        console.log(box1cp.clone().multiply(relativeVelocity.normalize()))
+                        console.log(box2cp.clone().multiply(relativeVelocity.normalize()))
+                        const dir = box1cp.clone().multiply(relativeVelocity.clone().normalize()).sub(box2cp.clone().multiply(relativeVelocity.normalize()))
+                        console.log(dir)
+                        const absDir = new THREE.Vector3()
+                        const d = collision.depth / 2
+
+                        box1.mesh.position.add(dir.clone().multiplyScalar(4))
+                        box2.mesh.position.add(dir.clone().multiplyScalar(4).negate())
+
+                        box1.velocity.addScaledVector(collision.normal.clone(), -dot * 1 )
+                        box2.velocity.addScaledVector(collision.normal.clone(), dot * 1 )
+
+                   }
                 }
             })
         })
