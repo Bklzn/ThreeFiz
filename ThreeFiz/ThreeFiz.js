@@ -26,12 +26,16 @@ class ThreeFiz{
             this.SCENE.add(box.mesh)
             box.collider = new OBB()
         })
-        this.light = new THREE.PointLight(0xFFFFFF,1);
-        this.helplight = new THREE.PointLightHelper(this.light);
-        this.SCENE.add(
-            this.light,
-            this.helplight,
-        )
+        // this.light = new THREE.PointLight(0xFF0000,1);
+        // this.light2 = new THREE.PointLight(0x0000FF,1);
+        // this.helplight = new THREE.PointLightHelper(this.light);
+        // this.helplight2 = new THREE.PointLightHelper(this.light2);
+        // this.SCENE.add(
+        //     this.light,
+        //     this.light2,
+        //     this.helplight,
+        //     this.helplight2,
+        // )
     }
     addSphere(mesh, mass){
         let sphere = {
@@ -130,14 +134,6 @@ class ThreeFiz{
                         sphere2.velocity.addScaledVector(normal, dot * 0.5 )
                    }
                 }
-                // let collision = this.checkCollisions(sphere)
-                // if(collision){
-                //     let relativeVelocity = sphere.velocity.clone() //.sub(floor.velocity)
-                //     let dot = relativeVelocity.dot(collision.normal)
-                //     sphere.hit = true
-                //     sphere.collider.center.add( collision.normal.clone().multiplyScalar( collision.depth ))
-                //     sphere.velocity.addScaledVector(collision.normal, -dot * 1.5) // 1.5 to sprężystość, 2 = 100% odbitej energii + damping
-                // }
             })
         })
     }
@@ -166,28 +162,22 @@ class ThreeFiz{
                    if(box1.collider.intersectsOBB(box2.collider)){
                         const box1cp = new THREE.Vector3()
                         const box2cp = new THREE.Vector3()
-                        box1.collider.clampPoint(box2.collider.center, box1cp)
-                        box2.collider.clampPoint(box1.collider.center, box2cp)
-                        const collision = {
-                            normal: box1.collider.center.clone().sub(box1cp).normalize(),
-                            depth: box1cp.clone().sub(box2cp).length(),
-                        }
+
+                        const boxNormal = box1.collider.center.clone().sub(box2.collider.center).normalize()
+                        let box1clampFinder = new THREE.Ray(box1.collider.center, boxNormal.clone().negate())
+                        let box2clampFinder = new THREE.Ray(box2.collider.center,boxNormal)
+                        
+                        box1.collider.intersectRay(box1clampFinder, box1cp)
+                        box2.collider.intersectRay(box2clampFinder, box2cp)
+
+                        const depth = box2cp.clone().sub(box1cp).length()
                         const relativeVelocity = box1.velocity.clone().sub(box2.velocity.clone())
-                        const dot = relativeVelocity.dot(collision.normal)
-                        console.log(relativeVelocity.normalize())
-                        console.log(box1cp.clone().multiply(relativeVelocity.normalize()))
-                        console.log(box2cp.clone().multiply(relativeVelocity.normalize()))
-                        const dir = box1cp.clone().multiply(relativeVelocity.clone().normalize()).sub(box2cp.clone().multiply(relativeVelocity.normalize()))
-                        console.log(dir)
-                        const absDir = new THREE.Vector3()
-                        const d = collision.depth / 2
+                        const dot = relativeVelocity.dot(boxNormal)
+                        box1.mesh.position.addScaledVector(boxNormal.clone(), depth * 1.1)
+                        box2.mesh.position.addScaledVector(boxNormal.clone(), -depth * 1.1)
 
-                        box1.mesh.position.add(dir.clone().multiplyScalar(4))
-                        box2.mesh.position.add(dir.clone().multiplyScalar(4).negate())
-
-                        box1.velocity.addScaledVector(collision.normal.clone(), -dot * 1 )
-                        box2.velocity.addScaledVector(collision.normal.clone(), dot * 1 )
-
+                        box1.velocity.addScaledVector(boxNormal.clone(), -dot * 1 )
+                        box2.velocity.addScaledVector(boxNormal.clone(), dot * 1 )
                    }
                 }
             })

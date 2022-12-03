@@ -87,10 +87,10 @@
 
         //scenario
 
-        threeFizWorld.boxes[0].mesh.position.set(50,10,0)
+        threeFizWorld.boxes[0].mesh.position.set(50,20,0)
         threeFizWorld.boxes[1].mesh.position.set(-50,0,0)
 
-        threeFizWorld.boxes[0].velocity.set(-2000,0,0)
+        threeFizWorld.boxes[0].velocity.set(-2000,-800,0)
         // threeFizWorld.boxes[0].velocity.set(100,0,0)
         
         console.log(threeFizWorld.boxes[0])
@@ -101,10 +101,10 @@
             let box2 = threeFizWorld.boxes[1].mesh.position
             if(Math.abs(box1.x) > 200 || Math.abs(box1.y) > 200 || Math.abs(box1.z) > 200 ||
                Math.abs(box2.x) > 200 || Math.abs(box2.x) > 200 || Math.abs(box2.x) > 200){
-                threeFizWorld.boxes[0].mesh.position.set(50,10,0)
+                threeFizWorld.boxes[0].mesh.position.set(50,20,0)
                 threeFizWorld.boxes[1].mesh.position.set(-50,0,0)
 
-                threeFizWorld.boxes[0].velocity.set(-2000,0,0)
+                threeFizWorld.boxes[0].velocity.set(-2000,-800,0)
                 threeFizWorld.boxes[1].velocity.set(0,0,0)
             }
         }
