@@ -48,9 +48,10 @@
         };
 
         //objects
-        let boxGeo= new THREE.BoxGeometry(20,20,20);
+        let boxGeo= new THREE.BoxGeometry(10,10,10);
+        let boxGeo2= new THREE.BoxGeometry(20,20,20);
         let boxMat= new THREE.MeshPhongMaterial({color: 0xFF0000, wireframe: true});
-        let boxMat2= new THREE.MeshPhongMaterial({color: 0x00FF00, wireframe: true});
+        let boxMat2= new THREE.MeshPhongMaterial({color: 0x0000FF, wireframe: true});
 
         const light= new THREE.PointLight(0xFFFFFF,1);
         const helplight= new THREE.PointLightHelper(light);
@@ -59,7 +60,7 @@
         const threeFizWorld = new ThreeFiz(scene)
 
         threeFizWorld.addBox(new THREE.Mesh(boxGeo,boxMat), 10)
-        threeFizWorld.addBox(new THREE.Mesh(boxGeo,boxMat2), 10)
+        threeFizWorld.addBox(new THREE.Mesh(boxGeo2,boxMat2), 10)
         threeFizWorld.init()
 
         scene.add(
@@ -78,8 +79,8 @@
 
         const gui = new dat.GUI();
         // gui.add(threeFizWorld.spheres[0].collider.center,"y",0,500,.01).name('sphere y');
-        gui.add(threeFizWorld.boxes[0].mesh.position,"y",-50,50,.001).name('floor y');
-        gui.add(threeFizWorld.boxes[0].mesh.position,"x",-50,50,.001).name('floor x');
+        gui.add(threeFizWorld.boxes[0].position,"y",-50,50,.001).name('floor y');
+        gui.add(threeFizWorld.boxes[0].position,"x",-50,50,.001).name('floor x');
         gui.add(threeFizWorld.boxes[0].mesh.rotation,'z',-Math.PI,Math.PI,.0001).name('floor rotate');
         document.body.appendChild(document.createElement("p"))
         document.body.appendChild(document.createElement("p"))
@@ -87,25 +88,34 @@
 
         //scenario
 
-        threeFizWorld.boxes[0].mesh.position.set(50,20,0)
-        threeFizWorld.boxes[1].mesh.position.set(-50,0,0)
+        threeFizWorld.boxes[0].rotation.z = .3
+        threeFizWorld.boxes[0].rotation.y = .3
+        // threeFizWorld.boxes[1].rotation.z = -.9
+        // threeFizWorld.boxes[1].rotation.y = -.3
 
-        threeFizWorld.boxes[0].velocity.set(-2000,-800,0)
+        threeFizWorld.boxes[0].position.set(50,40,0)
+        threeFizWorld.boxes[1].position.set(-50,0,0)
+
+        threeFizWorld.boxes[0].velocity.set(-1500,-600,0)
+        threeFizWorld.boxes[0].rotationVelocity.set(0,0,0)
         // threeFizWorld.boxes[0].velocity.set(100,0,0)
         
         console.log(threeFizWorld.boxes[0])
         console.log(threeFizWorld.boxes[1])
         threeFizWorld.GRAVITY.set(0,0,0)
         function loopSimulation(){
-            let box1 = threeFizWorld.boxes[0].mesh.position
-            let box2 = threeFizWorld.boxes[1].mesh.position
+            let box1 = threeFizWorld.boxes[0].position
+            let box2 = threeFizWorld.boxes[1].position
             if(Math.abs(box1.x) > 200 || Math.abs(box1.y) > 200 || Math.abs(box1.z) > 200 ||
                Math.abs(box2.x) > 200 || Math.abs(box2.x) > 200 || Math.abs(box2.x) > 200){
-                threeFizWorld.boxes[0].mesh.position.set(50,20,0)
-                threeFizWorld.boxes[1].mesh.position.set(-50,0,0)
+                threeFizWorld.boxes[0].position.set(50,20,0)
+                threeFizWorld.boxes[1].position.set(-50,0,0)
 
-                threeFizWorld.boxes[0].velocity.set(-2000,-800,0)
+                threeFizWorld.boxes[0].velocity.set(-1500,-600,0)
+                threeFizWorld.boxes[0].rotationVelocity.set(0,0,0)
                 threeFizWorld.boxes[1].velocity.set(0,0,0)
+                threeFizWorld.boxes[1].rotationVelocity.set(0,0,0)
+                console.log("/////////////////////////////////////////////////")
             }
         }
 

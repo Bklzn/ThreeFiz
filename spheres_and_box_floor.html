@@ -88,9 +88,9 @@
 
         // threeFizWorld.boxes[0].mesh.rotation.z = .3
         threeFizWorld.spheres.forEach((sphere, idx) => {
-            sphere.collider.center.set(
+            sphere.position.set(
                 Math.random() * 50 - 10,
-                100,
+                Math.random() * 50 - 10 + 100,
                 Math.random() * 50 - 10
             )
             })
@@ -110,9 +110,8 @@
         document.body.appendChild( stats.domElement );
 
         const gui = new dat.GUI();
-        gui.add(threeFizWorld.spheres[0].collider.center,"y",0,500,.01).name('sphere y');
-        gui.add(threeFizWorld.boxes[0].mesh.position,"y",-50,50,.001).name('floor y');
-        gui.add(threeFizWorld.boxes[0].mesh.position,"x",-50,50,.001).name('floor x');
+        gui.add(threeFizWorld.boxes[0].position,"y",-50,50,.001).name('floor y');
+        gui.add(threeFizWorld.boxes[0].position,"x",-50,50,.001).name('floor x');
         gui.add(threeFizWorld.boxes[0].mesh.rotation,'z',-Math.PI,Math.PI,.0001).name('floor rotate');
         document.body.appendChild(document.createElement("p"))
         // document.body.appendChild(document.createElement("p"))
@@ -122,8 +121,8 @@
 
         function loopBall(){
             threeFizWorld.spheres.forEach((sphere, idx) => {
-                if(sphere.collider.center.y < -1000) {
-                    sphere.collider.center.set(
+                if(sphere.position.y < -1000) {
+                    sphere.position.set(
                         Math.random() * 50 - 10,
                         11 * idx + 100,
                         Math.random() * 50 - 10
