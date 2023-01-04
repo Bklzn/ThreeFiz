@@ -14,7 +14,7 @@ class OBBs extends OBB {
         }
         let l1 = containsPoints1.length
         let l2 = containsPoints2.length
-        let v1,v2,distance
+        let v1,v2,distance, point, helppoint = new Vector3(), depth, depthFinder, normal
         switch (true) {
             case l1 == 0 && l2 == 0:
                 const boxNormal = this.center.clone().sub(obb.center).normalize()
@@ -25,15 +25,32 @@ class OBBs extends OBB {
                 this.intersectRay(boxclampFinder1, i1)
                 this.intersectRay(boxclampFinder2, i2)
                 diff = i2.clone().sub(i1).divideScalar(2)
-                return i1.clone().add(diff)
+                point = i1.clone().add(diff)
+                depth = i1.clone().sub(i2).length()
+                break;
             case l1 == 1 && l2 == 1:
                 diff = containsPoints2[0].clone().sub(containsPoints1[0]).divideScalar(2)
-                return containsPoints1[0].clone().add(diff)
+                point = containsPoints1[0].clone().add(diff)
+                normal = this.center.clone().sub(point).normalize().negate()
+                depthFinder = new Ray(this.center, normal.clone())
+                obb.intersectRay(depthFinder, helppoint)
+                depth = helppoint.distanceTo(point)
+                break;
             case l1 == 1 && l2 == 0:
-                return containsPoints1[0]
+                point = containsPoints1[0]
+                normal = this.center.clone().sub(point).normalize().negate()
+                depthFinder = new Ray(this.center, normal.clone())
+                obb.intersectRay(depthFinder, helppoint)
+                depth = helppoint.distanceTo(point)
+                break;
             case l1 == 2 && l2 == 0:
                 diff = containsPoints1[1].clone().sub(containsPoints1[0]).divideScalar(2)
-                return containsPoints1[0].clone().add(diff)
+                point = containsPoints1[0].clone().add(diff)
+                normal = this.center.clone().sub(point).normalize().negate()
+                depthFinder = new Ray(this.center, normal.clone())
+                obb.intersectRay(depthFinder, helppoint)
+                depth = helppoint.distanceTo(point)
+                break;
             case l1 > 2:
                 distance=0
                 for(let i = 0; i<containsPoints1.length;i++){
@@ -46,13 +63,28 @@ class OBBs extends OBB {
                     }
                 }
                 diff = v2.clone().sub(v1).divideScalar(2)
-                return v1.clone().add(diff)
+                point = v1.clone().add(diff)
+                normal = this.center.clone().sub(point).normalize().negate()
+                depthFinder = new Ray(this.center, normal.clone())
+                obb.intersectRay(depthFinder, helppoint)
+                depth = helppoint.distanceTo(point)
+                break;
 
             case l1 == 0 && l2 == 1:
-                return containsPoints2[0]
+                point = containsPoints2[0]
+                normal = obb.center.clone().sub(point).normalize().negate()
+                depthFinder = new Ray(obb.center, normal.clone())
+                this.intersectRay(depthFinder, helppoint)
+                depth = helppoint.distanceTo(point)
+                break;
             case l1 == 0 && l2 == 2:
                 diff = containsPoints2[1].clone().sub(containsPoints2[0]).divideScalar(2)
-                return containsPoints2[0].clone().add(diff)
+                point = containsPoints2[0].clone().add(diff)
+                normal = obb.center.clone().sub(point).normalize().negate()
+                depthFinder = new Ray(obb.center, normal.clone())
+                this.intersectRay(depthFinder, helppoint)
+                depth = helppoint.distanceTo(point)
+                break;
             case l2 > 2:
                 distance=0
                 for(let i = 0; i<containsPoints2.length;i++){
@@ -65,8 +97,14 @@ class OBBs extends OBB {
                     }
                 }
                 diff = v2.clone().sub(v1).divideScalar(2)
-                return v1.clone().add(diff)
+                point = v1.clone().add(diff)
+                normal = obb.center.clone().sub(point).normalize().negate()
+                depthFinder = new Ray(obb.center, normal.clone())
+                this.intersectRay(depthFinder, helppoint)
+                depth = helppoint.distanceTo(point)
+                break;
         }
+        return {point, depth}
     } 
     getVertices() {
         const rotationMatrix = this.getRotationMatrix()
