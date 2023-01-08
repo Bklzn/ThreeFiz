@@ -109,7 +109,7 @@ class ThreeFiz{
         })
         this.sphereBoxCollisions()
         this.spheresCollisions()
-        this.boxesCollisions()
+        this.boxesCollisions(time/1000)
         // if (this.world) this.worldCollisions(time) // może do update lepiej
     }
     checkCollisions(obj){
@@ -172,48 +172,30 @@ class ThreeFiz{
             })
         })
     }
-    boxesCollisions(){
+    boxesCollisions(dT){
         this.boxes.forEach((box1, idx1) => {
             this.boxes.forEach((box2, idx2) => {
                 if(box1 !== box2 && idx2 > idx1){
                     if(box1.collider.intersectsOBB(box2.collider)){
                         const collisionPoint = box1.collider.collisionPoint(box2.collider)
                         this.red.position.copy(collisionPoint.point)
-                        this.blue.position.copy(box2.position)
-                        let restitution = 0
+                        let restitution = 1
+                        let friction = .5
                         let distanceFromAxisOfRotation1 = box1.position.distanceTo(collisionPoint.point)
                         let distanceFromAxisOfRotation2 = box2.position.distanceTo(collisionPoint.point)
                         let momentOfInertia1 = box1.mass * (box1.mesh.geometry.parameters.width^2 + box1.mesh.geometry.parameters.height^2 + box1.mesh.geometry.parameters.depth^2) / 12 + box1.mass * distanceFromAxisOfRotation1^2
                         let momentOfInertia2 = box2.mass * (box2.mesh.geometry.parameters.width^2 + box2.mesh.geometry.parameters.height^2 + box2.mesh.geometry.parameters.depth^2) / 12 + box2.mass * distanceFromAxisOfRotation2^2
 
-                        const positionDifference1 = new THREE.Vector3().subVectors(box1.position, collisionPoint.point)
-                        const positionDifference2 = new THREE.Vector3().subVectors(box2.position, collisionPoint.point)
-
-                        const normal = (box1.position.clone().sub(collisionPoint.point)).normalize()
-
-                        // const force = normal.multiplyScalar(restitution);
-                        const force = normal.clone().multiplyScalar(box1.velocity.clone().dot(normal) - box2.velocity.clone().dot(normal)).multiplyScalar(2 * (restitution + restitution) / (box1.mass + box2.mass))
-
-                        const newVelocity1 = box1.velocity.clone().multiplyScalar(box1.mass).add(box2.velocity.clone().multiplyScalar(box2.mass)).add(force.clone().multiplyScalar(box2.mass)).divideScalar(box1.mass + box2.mass);
-                        const newVelocity2 = box2.velocity.clone().multiplyScalar(box2.mass).add(box1.velocity.clone().multiplyScalar(box1.mass)).add(force.clone().multiplyScalar(box1.mass)).divideScalar(box1.mass + box2.mass);
-
-                        const sumInertia = momentOfInertia2 + momentOfInertia1
-                        const RotMultiInertia1 = box1.rotationVelocity.clone().multiplyScalar(momentOfInertia1)
-                        const RotMultiInertia2 = box2.rotationVelocity.clone().multiplyScalar(momentOfInertia2)
-
-                        const newRotationVelocity1 = RotMultiInertia1.add(RotMultiInertia2).add(positionDifference1).cross(force).multiplyScalar(momentOfInertia2).divideScalar(sumInertia)
-                        const newRotationVelocity2 = RotMultiInertia2.add(RotMultiInertia1).add(positionDifference2).cross(force).multiplyScalar(momentOfInertia1).divideScalar(sumInertia)
-
+                        const normal = box1.position.clone().sub(collisionPoint.point).normalize()
+                        const normalPlane = new THREE.Vector3(0, 1, 0).normalize()
                         box1.position.add( normal.clone().multiplyScalar( collisionPoint.depth * 2))
-                        box1.velocity.copy(newVelocity1.negate().multiplyScalar(restitution));
-                        box2.velocity.copy(newVelocity2.multiplyScalar(restitution));
 
-                    
-
-                        // box1.rotationVelocity.copy(newRotationVelocity1);
-                        // box2.rotationVelocity.copy(newRotationVelocity2);
-                        // box2.velocity.set(0,0,0)
-                        // this.GRAVITY.set(0,0,0)
+                        const JvelN = (-(1 + Math.E)*((box1.velocity.clone().sub(box2.velocity)).dot(normal)))
+                        const JvelD = (normal.clone().dot(normal.clone().multiplyScalar(1/box1.mass + 1/box2.mass)))
+                        const Jvel = JvelN/JvelD
+                        const newV1 = Jvel/box1.mass
+                        box1.velocity.addScaledVector(normal, newV1 * restitution)
+                        // asd
                     }
                 }
             })
