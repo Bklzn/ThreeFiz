@@ -1,4 +1,4 @@
-import { Vector3,Matrix4,Ray } from 'three';
+import { Vector3,Matrix4,Ray, Plane } from 'three';
 import { OBB } from '../threejs/three/examples/jsm/math/OBB.js';
 
 class OBBs extends OBB {
@@ -14,19 +14,82 @@ class OBBs extends OBB {
         }
         let l1 = containsPoints1.length
         let l2 = containsPoints2.length
-        let v1,v2,distance, point, helppoint = new Vector3(), depth, depthFinder, normal
+        let v1,v2,distance, point, helppoint = new Vector3(), depth, depthFinder, normal, collisionNormal = new Vector3()
         switch (true) {
-            case l1 == 0 && l2 == 0:
-                const boxNormal = this.center.clone().sub(obb.center).normalize()
-                let boxclampFinder1 = new Ray(this.center, boxNormal.clone().negate())
-                let boxclampFinder2 = new Ray(obb.center, boxNormal.clone())
-                let i1 = new Vector3()
-                let i2 = new Vector3()
-                this.intersectRay(boxclampFinder1, i1)
-                this.intersectRay(boxclampFinder2, i2)
-                diff = i2.clone().sub(i1).divideScalar(2)
-                point = i1.clone().add(diff)
-                depth = i1.clone().sub(i2).length()
+            default:
+                let edgePoints1 = []
+                let edgePoints2 = []
+                let collidingPoints = []
+                let pointFinder = new Ray()
+                let pointChecker = new Ray()
+                for(let i=0; i<vertices1.length; i++){
+                    let neighbors = this.getVerticesNeighbors()[i]
+                    for(let j=0; j<neighbors.length; j++){
+                        let p = new Vector3()
+                        normal = vertices1[i].clone().sub(neighbors[j].clone()).normalize()
+                        pointFinder.set(vertices1[i], normal.negate())
+                        obb.intersectRay(pointFinder, p)
+                        if(p.x != 0){
+                            let pC = new Vector3()
+                            pointChecker.set(neighbors[j], normal.negate())
+                            obb.intersectRay(pointChecker, pC)
+                            if(pC.x != 0){
+                                edgePoints1.push({pC,r:[vertices1[i],neighbors[j]]})
+                            }
+                        }
+                    }
+                }
+                for(let i=0; i<vertices2.length; i++){
+                    let neighbors = obb.getVerticesNeighbors()[i]
+                    for(let j=0; j<neighbors.length; j++){
+                        let p = new Vector3()
+                        normal = vertices2[i].clone().sub(neighbors[j].clone()).normalize()
+                        pointFinder.set(vertices2[i], normal.negate())
+                        this.intersectRay(pointFinder, p)
+                        if(p.x != 0){
+                            let pC = new Vector3()
+                            pointChecker.set(neighbors[j], normal.negate())
+                            this.intersectRay(pointChecker, pC)
+                            if(pC.x != 0){
+                                edgePoints2.push({pC,r:[vertices2[i],neighbors[j]]})
+                            }
+                        }
+                    }
+                }
+                collidingPoints = edgePoints1
+                if(edgePoints2.length < edgePoints1.length){
+                    collidingPoints = edgePoints2
+                }
+                switch(collidingPoints.length){
+                    case 2:
+                        diff = collidingPoints[0].pC.clone().sub(collidingPoints[1].pC).divideScalar(2)
+                        point = collidingPoints[1].pC.clone().add(diff)
+                        normal = this.center.clone().sub(point).normalize().negate()
+                        depthFinder = new Ray(this.center, normal.clone())
+                        obb.intersectRay(depthFinder, helppoint)
+                        depth = helppoint.distanceTo(point)
+                        collisionNormal = this.calcNormalByVertices(edgePoints1[0].r, edgePoints2[0].r, point)
+                        break;
+                    case 4:
+                        distance=0
+                        for(let i = 0; i<collidingPoints.length;i++){
+                            for(let j = i + 1; j<collidingPoints.length; j++){
+                                if(collidingPoints[i].pC.distanceTo(collidingPoints[j].pC) > distance){
+                                    v1 = collidingPoints[i].pC
+                                    v2 = collidingPoints[j].pC
+                                    distance = v1.distanceTo(v2)
+                                }
+                            }
+                        }
+                        diff = v2.clone().sub(v1).divideScalar(2)
+                        point = v1.clone().add(diff)
+                        normal = this.center.clone().sub(point).normalize().negate()
+                        depthFinder = new Ray(this.center, normal.clone())
+                        obb.intersectRay(depthFinder, helppoint)
+                        depth = helppoint.distanceTo(point)
+                        // collisionNormal.copy(this.calcNormal(obb, point))
+                        break;
+                }
                 break;
             case l1 == 1 && l2 == 1:
                 diff = containsPoints2[0].clone().sub(containsPoints1[0]).divideScalar(2)
@@ -35,6 +98,7 @@ class OBBs extends OBB {
                 depthFinder = new Ray(this.center, normal.clone())
                 obb.intersectRay(depthFinder, helppoint)
                 depth = helppoint.distanceTo(point)
+                collisionNormal = this.center.clone().sub(obb.center).normalize().negate()
                 break;
             case l1 == 1 && l2 == 0:
                 point = containsPoints1[0]
@@ -42,6 +106,7 @@ class OBBs extends OBB {
                 depthFinder = new Ray(this.center, normal.clone())
                 obb.intersectRay(depthFinder, helppoint)
                 depth = helppoint.distanceTo(point)
+                collisionNormal = this.calcNormalByPoint(obb.getFaces(), point)
                 break;
             case l1 == 2 && l2 == 0:
                 diff = containsPoints1[1].clone().sub(containsPoints1[0]).divideScalar(2)
@@ -50,6 +115,7 @@ class OBBs extends OBB {
                 depthFinder = new Ray(this.center, normal.clone())
                 obb.intersectRay(depthFinder, helppoint)
                 depth = helppoint.distanceTo(point)
+                collisionNormal = this.calcNormalByPoint(obb.getFaces(), point)
                 break;
             case l1 > 2:
                 distance=0
@@ -68,6 +134,7 @@ class OBBs extends OBB {
                 depthFinder = new Ray(this.center, normal.clone())
                 obb.intersectRay(depthFinder, helppoint)
                 depth = helppoint.distanceTo(point)
+                collisionNormal = this.calcNormalByPoint(obb.getFaces(), point)
                 break;
 
             case l1 == 0 && l2 == 1:
@@ -76,6 +143,7 @@ class OBBs extends OBB {
                 depthFinder = new Ray(obb.center, normal.clone())
                 this.intersectRay(depthFinder, helppoint)
                 depth = helppoint.distanceTo(point)
+                collisionNormal = this.calcNormalByPoint(this.getFaces(), point)
                 break;
             case l1 == 0 && l2 == 2:
                 diff = containsPoints2[1].clone().sub(containsPoints2[0]).divideScalar(2)
@@ -84,6 +152,7 @@ class OBBs extends OBB {
                 depthFinder = new Ray(obb.center, normal.clone())
                 this.intersectRay(depthFinder, helppoint)
                 depth = helppoint.distanceTo(point)
+                collisionNormal = this.calcNormalByPoint(this.getFaces(), point)
                 break;
             case l2 > 2:
                 distance=0
@@ -102,9 +171,10 @@ class OBBs extends OBB {
                 depthFinder = new Ray(obb.center, normal.clone())
                 this.intersectRay(depthFinder, helppoint)
                 depth = helppoint.distanceTo(point)
+                collisionNormal = this.calcNormalByPoint(this.getFaces(), point)
                 break;
         }
-        return {point, depth}
+        return {point, depth, collisionNormal}
     } 
     getVertices() {
         const rotationMatrix = this.getRotationMatrix()
@@ -141,6 +211,20 @@ class OBBs extends OBB {
         ]
         return faces
       }
+    getVerticesNeighbors() {
+        const vertices = this.getVertices();
+        const neighbors = [
+          [vertices[1], vertices[3], vertices[4]], // vertex 0
+          [vertices[0], vertices[2], vertices[5]], // vertex 1
+          [vertices[1], vertices[3], vertices[6]], // vertex 2
+          [vertices[0], vertices[2], vertices[7]], // vertex 3
+          [vertices[0], vertices[5], vertices[7]], // vertex 4
+          [vertices[1], vertices[4], vertices[6]], // vertex 5
+          [vertices[2], vertices[5], vertices[7]], // vertex 6
+          [vertices[3], vertices[4], vertices[6]], // vertex 7
+        ]
+        return neighbors
+      }
 
     getRotationMatrix() {
         const matrix = new Matrix4();
@@ -159,6 +243,30 @@ class OBBs extends OBB {
         ];
         return axes;
     }
+
+    calcNormalByPoint(facesToSearch, collisionPoint){
+        // liczy normalną z punktu umiesczonego na ścianie
+        let minDist = Infinity;
+        let closestFace;
+        let finalPlane = new Plane
+        for (let i = 0; i < facesToSearch.length; i++) {
+            let plane = new Plane()
+            plane.setFromCoplanarPoints(facesToSearch[i][0], facesToSearch[i][1], facesToSearch[i][2])
+            let dist = Math.abs(plane.distanceToPoint(collisionPoint))
+            if (dist < minDist) {
+                minDist = dist
+                closestFace = facesToSearch[i];
+            }
+        }
+        finalPlane.setFromCoplanarPoints(closestFace[0], closestFace[1], closestFace[2])
+        return finalPlane.normal
+    }
+    calcNormalByVertices(r1, r2, collisionPoint){
+        // liczy normalną z punktu umiesczonego na krawędzi
+        let plane = new Plane()
+        plane.setFromCoplanarPoints(r1[0], r1[1], r2[0])
+        return plane.normal.negate()
+        }
 }
 
 export { OBBs };

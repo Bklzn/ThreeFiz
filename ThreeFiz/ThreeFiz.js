@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { Octree } from '../threejs/three/examples/jsm/math/Octree.js';
 import { OBBs } from '../ThreeFiz/OBB.js';
-import { Vector3 } from 'three';
+import { Ray, Vector3 } from 'three';
 
 class ThreeFiz{
     constructor(SCENE, world = null,TIME_STEP = .03){
@@ -32,6 +32,7 @@ class ThreeFiz{
         this.helplight = new THREE.PointLightHelper(this.red);
         this.helplight2 = new THREE.PointLightHelper(this.blue);
         this.helplight3 = new THREE.PointLightHelper(this.yellow);
+        this.iterate = 0
         this.SCENE.add(
             this.red,
             this.blue,
@@ -178,8 +179,17 @@ class ThreeFiz{
                 if(box1 !== box2 && idx2 > idx1){
                     if(box1.collider.intersectsOBB(box2.collider)){
                         const collisionPoint = box1.collider.collisionPoint(box2.collider)
-                        this.red.position.copy(collisionPoint.point)
-                        let restitution = 1
+                        if(this.iterate == 0){
+                            // console.log(collisionPoint)
+                            // this.iterate++
+                            // this.yellow.position.copy(collisionPoint.collisionNormal[0])
+                            // this.blue.position.copy(collisionPoint.collisionNormal[1])
+                            // this.red.position.copy(collisionPoint.collisionNormal[2])
+                            
+                            // this.red.position.copy(collisionPoint.point)
+                            // this.SCENE.add(new THREE.ArrowHelper( collisionPoint.collisionNormal, collisionPoint.point, 10, 0xFFFF00 ))
+                        }
+                        let restitution = .5
                         let friction = .5
                         let distanceFromAxisOfRotation1 = box1.position.distanceTo(collisionPoint.point)
                         let distanceFromAxisOfRotation2 = box2.position.distanceTo(collisionPoint.point)
@@ -196,6 +206,7 @@ class ThreeFiz{
                         const newV1 = Jvel/box1.mass
                         box1.velocity.addScaledVector(normal, newV1 * restitution)
                         // asd
+                        // box1.velocity.set(0,0,0)
                     }
                 }
             })
@@ -227,23 +238,5 @@ class ThreeFiz{
         }
         if(true) return false
     }
-    // ClosestPtPointOBB(point, OBB)
-    //     {
-    //     let d = new THREE.Vector3().copy(p).sub(OBB.center);
-    //     // Start result at center of box; make steps from there
-    //     result = OBB.center;
-    //     // For each OBB axis...
-    //     for (let i = 0; i < 3; i++) {
-    //         // ...project d onto that axis to get the distance
-    //         // along the axis of d from the box center
-    //         let dist = d.dot(b.u[i]);
-    //         // If distance farther than the box extents, clamp to the box
-    //         if (dist > b.e[i]) dist = b.e[i];
-    //         if (dist < -b.e[i]) dist = -b.e[i];
-    //         // Step that distance along the axis to get world coordinate
-    //         result += dist * b.u[i];
-    //     }
-    //     return result
-    // }
 }
 export default ThreeFiz
