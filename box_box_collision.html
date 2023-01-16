@@ -88,12 +88,12 @@
 
         //scenario
 
-        threeFizWorld.boxes[0].rotation.z = .9
-        threeFizWorld.boxes[0].rotation.y = .9
-        // threeFizWorld.boxes[1].rotation.z = -.9
-        // threeFizWorld.boxes[1].rotation.y = -.9
+        threeFizWorld.boxes[0].rotation.z = .01
+        // threeFizWorld.boxes[0].rotation.y = .3
+        // threeFizWorld.boxes[1].rotation.z = Math.PI/4
+        // threeFizWorld.boxes[1].rotation.y = Math.PI/4 - .165
 
-        threeFizWorld.boxes[0].position.set(100,50,0)
+        threeFizWorld.boxes[0].position.set(100,35, 0)
         threeFizWorld.boxes[1].position.set(0,0,0)
 
         threeFizWorld.boxes[0].velocity.set(-1500,-600,0)
@@ -109,7 +109,7 @@
             if(Math.abs(box1.x) > 200 || Math.abs(box1.y) > 200 || Math.abs(box1.z) > 200 ||
                Math.abs(box2.x) > 200 || Math.abs(box2.x) > 200 || Math.abs(box2.x) > 200){
                 threeFizWorld.boxes[0].position.set(50,20,0)
-                threeFizWorld.boxes[1].position.set(-50,0,0)
+                threeFizWorld.boxes[1].position.set(0,0,0)
 
                 threeFizWorld.boxes[0].velocity.set(-1500,-600,0)
                 threeFizWorld.boxes[0].rotationVelocity.set(0,0,0)

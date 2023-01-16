@@ -14,61 +14,23 @@ class OBBs extends OBB {
         }
         let l1 = containsPoints1.length
         let l2 = containsPoints2.length
-        let v1,v2,distance, point, helppoint = new Vector3(), depth, depthFinder, normal, collisionNormal = new Vector3()
+        let v1,v2,distance, point, depth, normal, toTest, edgePoints
         switch (true) {
             default:
-                let edgePoints1 = []
-                let edgePoints2 = []
                 let collidingPoints = []
-                let pointFinder = new Ray()
-                let pointChecker = new Ray()
-                for(let i=0; i<vertices1.length; i++){
-                    let neighbors = this.getVerticesNeighbors()[i]
-                    for(let j=0; j<neighbors.length; j++){
-                        let p = new Vector3()
-                        normal = vertices1[i].clone().sub(neighbors[j].clone()).normalize()
-                        pointFinder.set(vertices1[i], normal.negate())
-                        obb.intersectRay(pointFinder, p)
-                        if(p.x != 0){
-                            let pC = new Vector3()
-                            pointChecker.set(neighbors[j], normal.negate())
-                            obb.intersectRay(pointChecker, pC)
-                            if(pC.x != 0){
-                                edgePoints1.push({pC,r:[vertices1[i],neighbors[j]]})
-                            }
-                        }
-                    }
-                }
-                for(let i=0; i<vertices2.length; i++){
-                    let neighbors = obb.getVerticesNeighbors()[i]
-                    for(let j=0; j<neighbors.length; j++){
-                        let p = new Vector3()
-                        normal = vertices2[i].clone().sub(neighbors[j].clone()).normalize()
-                        pointFinder.set(vertices2[i], normal.negate())
-                        this.intersectRay(pointFinder, p)
-                        if(p.x != 0){
-                            let pC = new Vector3()
-                            pointChecker.set(neighbors[j], normal.negate())
-                            this.intersectRay(pointChecker, pC)
-                            if(pC.x != 0){
-                                edgePoints2.push({pC,r:[vertices2[i],neighbors[j]]})
-                            }
-                        }
-                    }
-                }
+                let edgePoints1 = this.pointOnEdges( obb )
+                let edgePoints2 = obb.pointOnEdges( this )
                 collidingPoints = edgePoints1
                 if(edgePoints2.length < edgePoints1.length){
                     collidingPoints = edgePoints2
                 }
                 switch(collidingPoints.length){
                     case 2:
+                        console.log("00")
                         diff = collidingPoints[0].pC.clone().sub(collidingPoints[1].pC).divideScalar(2)
                         point = collidingPoints[1].pC.clone().add(diff)
-                        normal = this.center.clone().sub(point).normalize().negate()
-                        depthFinder = new Ray(this.center, normal.clone())
-                        obb.intersectRay(depthFinder, helppoint)
-                        depth = helppoint.distanceTo(point)
-                        collisionNormal = this.calcNormalByVertices(edgePoints1[0].r, edgePoints2[0].r, point)
+                        normal = this.calcNormalByVertices(edgePoints1[0].r, edgePoints2[0].r, point)
+                        depth = this.calcDepth(point, normal, obb)
                         break;
                     case 4:
                         distance=0
@@ -83,39 +45,29 @@ class OBBs extends OBB {
                         }
                         diff = v2.clone().sub(v1).divideScalar(2)
                         point = v1.clone().add(diff)
-                        normal = this.center.clone().sub(point).normalize().negate()
-                        depthFinder = new Ray(this.center, normal.clone())
-                        obb.intersectRay(depthFinder, helppoint)
-                        depth = helppoint.distanceTo(point)
-                        // collisionNormal.copy(this.calcNormal(obb, point))
+                        normal = this.calcNormalByVertices(edgePoints1[0].r, edgePoints2[0].r, point)
+                        depth = this.calcDepth(point, normal, obb)
                         break;
                 }
                 break;
             case l1 == 1 && l2 == 1:
+                console.log("v-v")
                 diff = containsPoints2[0].clone().sub(containsPoints1[0]).divideScalar(2)
                 point = containsPoints1[0].clone().add(diff)
-                normal = this.center.clone().sub(point).normalize().negate()
-                depthFinder = new Ray(this.center, normal.clone())
-                obb.intersectRay(depthFinder, helppoint)
-                depth = helppoint.distanceTo(point)
-                collisionNormal = this.center.clone().sub(obb.center).normalize().negate()
+                normal = this.center.clone().sub(point).normalize()
+                depth = this.calcDepth(point, normal, obb)
                 break;
             case l1 == 1 && l2 == 0:
+                console.log("l1 1")
                 point = containsPoints1[0]
-                normal = this.center.clone().sub(point).normalize().negate()
-                depthFinder = new Ray(this.center, normal.clone())
-                obb.intersectRay(depthFinder, helppoint)
-                depth = helppoint.distanceTo(point)
-                collisionNormal = this.calcNormalByPoint(obb.getFaces(), point)
+                normal = this.calcNormalByPoint(obb, point)
+                depth = this.calcDepth(point, normal, obb)
                 break;
             case l1 == 2 && l2 == 0:
                 diff = containsPoints1[1].clone().sub(containsPoints1[0]).divideScalar(2)
                 point = containsPoints1[0].clone().add(diff)
-                normal = this.center.clone().sub(point).normalize().negate()
-                depthFinder = new Ray(this.center, normal.clone())
-                obb.intersectRay(depthFinder, helppoint)
-                depth = helppoint.distanceTo(point)
-                collisionNormal = this.calcNormalByPoint(obb.getFaces(), point)
+                normal = this.calcNormalByPoint(obb, point)
+                depth = this.calcDepth(point, normal, obb)
                 break;
             case l1 > 2:
                 distance=0
@@ -130,29 +82,34 @@ class OBBs extends OBB {
                 }
                 diff = v2.clone().sub(v1).divideScalar(2)
                 point = v1.clone().add(diff)
-                normal = this.center.clone().sub(point).normalize().negate()
-                depthFinder = new Ray(this.center, normal.clone())
-                obb.intersectRay(depthFinder, helppoint)
-                depth = helppoint.distanceTo(point)
-                collisionNormal = this.calcNormalByPoint(obb.getFaces(), point)
+                normal = this.calcNormalByPoint(obb, point)
+                depth = this.calcDepth(point, normal, obb)
                 break;
 
             case l1 == 0 && l2 == 1:
+                console.log("l2 1")
+                edgePoints = this.pointOnEdges( obb )
                 point = containsPoints2[0]
-                normal = obb.center.clone().sub(point).normalize().negate()
-                depthFinder = new Ray(obb.center, normal.clone())
-                this.intersectRay(depthFinder, helppoint)
-                depth = helppoint.distanceTo(point)
-                collisionNormal = this.calcNormalByPoint(this.getFaces(), point)
+                switch(edgePoints.length)
+                {
+                    case 6:
+                        normal = obb.calcNormals(this, point).vertex
+                        break
+                    case 2:
+                        normal = obb.calcNormals(this, point).edge
+                        break
+                    default:
+                        normal = obb.calcNormals(this, point).face
+                        break
+                }
+                // normal = this.calcNormals(this.getFaces(), point).edge
+                depth = this.calcDepth(point, normal, obb)
                 break;
             case l1 == 0 && l2 == 2:
                 diff = containsPoints2[1].clone().sub(containsPoints2[0]).divideScalar(2)
                 point = containsPoints2[0].clone().add(diff)
-                normal = obb.center.clone().sub(point).normalize().negate()
-                depthFinder = new Ray(obb.center, normal.clone())
-                this.intersectRay(depthFinder, helppoint)
-                depth = helppoint.distanceTo(point)
-                collisionNormal = this.calcNormalByPoint(this.getFaces(), point)
+                normal = this.calcNormals(this.getFaces(), point).face
+                depth = this.calcDepth(point, normal, obb)
                 break;
             case l2 > 2:
                 distance=0
@@ -167,14 +124,11 @@ class OBBs extends OBB {
                 }
                 diff = v2.clone().sub(v1).divideScalar(2)
                 point = v1.clone().add(diff)
-                normal = obb.center.clone().sub(point).normalize().negate()
-                depthFinder = new Ray(obb.center, normal.clone())
-                this.intersectRay(depthFinder, helppoint)
-                depth = helppoint.distanceTo(point)
-                collisionNormal = this.calcNormalByPoint(this.getFaces(), point)
+                normal = this.calcNormals(this.getFaces(), point).face
+                depth = this.calcDepth(point, normal, obb)
                 break;
         }
-        return {point, depth, collisionNormal}
+        return {point, depth, normal, toTest}
     } 
     getVertices() {
         const rotationMatrix = this.getRotationMatrix()
@@ -244,8 +198,9 @@ class OBBs extends OBB {
         return axes;
     }
 
-    calcNormalByPoint(facesToSearch, collisionPoint){
+    calcNormalByPoint(obb, collisionPoint){
         // liczy normalną z punktu umiesczonego na ścianie
+        let facesToSearch = obb.getFaces()
         let minDist = Infinity;
         let closestFace;
         let finalPlane = new Plane
@@ -266,7 +221,46 @@ class OBBs extends OBB {
         let plane = new Plane()
         plane.setFromCoplanarPoints(r1[0], r1[1], r2[0])
         return plane.normal.negate()
+    }
+    calcDepth(point, normal, obb){
+        let helppoint1 = new Vector3().copy(point).addScaledVector(normal.clone().negate(), point.distanceTo(this.center))
+        let helppoint2 = new Vector3().copy(point).addScaledVector(normal.clone(), point.distanceTo(this.center))
+        let obbpoint1 = new Vector3().copy(point)
+        let obbpoint2 = new Vector3().copy(point)
+        let obbFinder = new Ray(helppoint1, normal.clone())
+        let obbFinder2 = new Ray(helppoint2, normal.clone().negate())
+
+        this.intersectRay(obbFinder, obbpoint1)
+        obb.intersectRay(obbFinder2, obbpoint2)
+
+        return obbpoint1.distanceTo(obbpoint2)
+    }
+    pointOnEdges( obb ){
+        let vertices = this.getVertices()
+        let points = []
+        let pointFinder = new Ray()
+        let pointChecker = new Ray()
+        for(let i=0; i<vertices.length; i++){
+            let neighbors = this.getVerticesNeighbors()[i]
+            for(let j=0; j<neighbors.length; j++){
+                let p = new Vector3()
+                let normal = vertices[i].clone().sub(neighbors[j].clone()).normalize()
+                pointFinder.set(vertices[i], normal.negate())
+                obb.intersectRay(pointFinder, p)
+                if(p.x != 0){
+                    let pC = new Vector3()
+                    pointChecker.set(neighbors[j], normal.negate())
+                    obb.intersectRay(pointChecker, pC)
+                    if(pC.x != 0){
+                        points.push({pC,r:[vertices[i],neighbors[j]]})
+                    }
+                }
+            }
         }
+
+        return points
+    }
 }
+
 
 export { OBBs };

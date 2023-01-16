@@ -89,7 +89,7 @@
         threeFizWorld.boxes.forEach((box, idx) => {
             box.position.set(
                 Math.random() * 50 - 10,
-                Math.random() * 50 - 10 + 100,
+                Math.random() * 50 - 10 + 20,
                 Math.random() * 50 - 10
             )
             })
@@ -118,6 +118,8 @@
 
 
         //scenario
+        threeFizWorld.boxes[0].rotation.z = 0
+        // threeFizWorld.boxes[0].rotation.y = -.9
 
         function loopBox(){
             threeFizWorld.boxes.forEach((box, idx) => {
