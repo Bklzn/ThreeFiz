@@ -26,7 +26,6 @@ class OBBs extends OBB {
                 }
                 switch(collidingPoints.length){
                     case 2:
-                        console.log("00")
                         diff = collidingPoints[0].pC.clone().sub(collidingPoints[1].pC).divideScalar(2)
                         point = collidingPoints[1].pC.clone().add(diff)
                         normal = this.calcNormalByVertices(edgePoints1[0].r, edgePoints2[0].r, point)
@@ -48,28 +47,57 @@ class OBBs extends OBB {
                         normal = this.calcNormalByVertices(edgePoints1[0].r, edgePoints2[0].r, point)
                         depth = this.calcDepth(point, normal, obb)
                         break;
+                    default:
+                        console.log("00")
+                        let ray1 = new Ray(this.center.clone(), obb.center.clone().sub(this.center).normalize())
+                        let ray2 = new Ray(obb.center.clone(), this.center.clone().sub(obb.center).normalize())
+                        let interPoint1 = new Vector3().copy(this.center.clone())
+                        let interPoint2 = new Vector3().copy(obb.center.clone())
+                        this.intersectRay(ray2, interPoint2)
+                        obb.intersectRay(ray1, interPoint1)
+                        diff = interPoint1.clone().sub(interPoint2).divideScalar(2)
+                        point = interPoint1.clone().add(diff)
+                        normal = this.calcNormalByPoint(obb, point)
+                        depth = this.calcDepth(point, normal, obb)
+                        break
                 }
                 break;
             case l1 == 1 && l2 == 1:
-                console.log("v-v")
+                // console.log("v-v")
                 diff = containsPoints2[0].clone().sub(containsPoints1[0]).divideScalar(2)
                 point = containsPoints1[0].clone().add(diff)
                 normal = this.center.clone().sub(point).normalize()
                 depth = this.calcDepth(point, normal, obb)
                 break;
             case l1 == 1 && l2 == 0:
-                console.log("l1 1")
+                // console.log("l1 1")
+                edgePoints = obb.pointOnEdges( this )
+                toTest = edgePoints
                 point = containsPoints1[0]
-                normal = this.calcNormalByPoint(obb, point)
+                switch(edgePoints.length)
+                {
+                    case 2:
+                        // console.log("c 2")
+                        diff = edgePoints[1].pC.clone().sub(point).divideScalar(2)
+                        point = containsPoints1[0].clone().add(diff)
+                        normal = this.calcNormalByVertices(edgePoints[0].r, [point], point)
+                        break
+                    default:
+                        // console.log("c d")
+                        normal = this.calcNormalByPoint(obb, point)
+                        break
+                }
                 depth = this.calcDepth(point, normal, obb)
-                break;
+                break
             case l1 == 2 && l2 == 0:
+                // console.log("l1 2")
                 diff = containsPoints1[1].clone().sub(containsPoints1[0]).divideScalar(2)
                 point = containsPoints1[0].clone().add(diff)
                 normal = this.calcNormalByPoint(obb, point)
                 depth = this.calcDepth(point, normal, obb)
                 break;
             case l1 > 2:
+                // console.log("l1")
                 distance=0
                 for(let i = 0; i<containsPoints1.length;i++){
                     for(let j = i + 1; j<containsPoints1.length; j++){
@@ -87,31 +115,35 @@ class OBBs extends OBB {
                 break;
 
             case l1 == 0 && l2 == 1:
-                console.log("l2 1")
+                // console.log("l2 1")
                 edgePoints = this.pointOnEdges( obb )
+                toTest = edgePoints
                 point = containsPoints2[0]
                 switch(edgePoints.length)
                 {
-                    case 6:
-                        normal = obb.calcNormals(this, point).vertex
-                        break
                     case 2:
-                        normal = obb.calcNormals(this, point).edge
+                        // console.log("c 2")
+                        diff = edgePoints[1].pC.clone().sub(point).divideScalar(2)
+                        point = containsPoints2[0].clone().add(diff)
+                        normal = this.calcNormalByVertices(edgePoints[0].r, [point], point)
                         break
                     default:
-                        normal = obb.calcNormals(this, point).face
+                        // console.log("c d")
+                        normal = obb.calcNormalByPoint(this, point).negate()
                         break
                 }
                 // normal = this.calcNormals(this.getFaces(), point).edge
                 depth = this.calcDepth(point, normal, obb)
                 break;
             case l1 == 0 && l2 == 2:
+                // console.log("l2 2")
                 diff = containsPoints2[1].clone().sub(containsPoints2[0]).divideScalar(2)
                 point = containsPoints2[0].clone().add(diff)
-                normal = this.calcNormals(this.getFaces(), point).face
+                normal = this.calcNormalByPoint(this, point)
                 depth = this.calcDepth(point, normal, obb)
                 break;
             case l2 > 2:
+                // console.log("l2")
                 distance=0
                 for(let i = 0; i<containsPoints2.length;i++){
                     for(let j = i + 1; j<containsPoints2.length; j++){
@@ -201,6 +233,8 @@ class OBBs extends OBB {
     calcNormalByPoint(obb, collisionPoint){
         // liczy normalną z punktu umiesczonego na ścianie
         let facesToSearch = obb.getFaces()
+        let helppoint = new Vector3().copy(collisionPoint)
+        let normal = new Vector3()
         let minDist = Infinity;
         let closestFace;
         let finalPlane = new Plane
@@ -214,13 +248,25 @@ class OBBs extends OBB {
             }
         }
         finalPlane.setFromCoplanarPoints(closestFace[0], closestFace[1], closestFace[2])
-        return finalPlane.normal
+        normal.copy(finalPlane.normal)
+        helppoint.addScaledVector(normal, 2)
+        if(helppoint.distanceTo(this.center) > collisionPoint.distanceTo(this.center)){
+            normal.negate()
+        }
+        return normal
     }
     calcNormalByVertices(r1, r2, collisionPoint){
         // liczy normalną z punktu umiesczonego na krawędzi
         let plane = new Plane()
+        let helppoint = new Vector3().copy(collisionPoint)
+        let normal = new Vector3()
         plane.setFromCoplanarPoints(r1[0], r1[1], r2[0])
-        return plane.normal.negate()
+        normal.copy(plane.normal)
+        helppoint.addScaledVector(normal, 2)
+        if(helppoint.distanceTo(this.center) > collisionPoint.distanceTo(this.center)){
+            normal.negate()
+        }
+        return normal
     }
     calcDepth(point, normal, obb){
         let helppoint1 = new Vector3().copy(point).addScaledVector(normal.clone().negate(), point.distanceTo(this.center))

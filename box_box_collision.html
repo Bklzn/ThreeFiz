@@ -78,22 +78,32 @@
         document.body.appendChild( stats.domElement );
 
         const gui = new dat.GUI();
+        const box1 = gui.addFolder('box1')
+        const box2 = gui.addFolder('box2')
         // gui.add(threeFizWorld.spheres[0].collider.center,"y",0,500,.01).name('sphere y');
-        gui.add(threeFizWorld.boxes[0].position,"y",-50,50,.001).name('floor y');
-        gui.add(threeFizWorld.boxes[0].position,"x",-50,50,.001).name('floor x');
-        gui.add(threeFizWorld.boxes[0].mesh.rotation,'z',-Math.PI,Math.PI,.0001).name('floor rotate');
+        box1.add(threeFizWorld.boxes[0].position,"x",-50,50,.001)
+        box1.add(threeFizWorld.boxes[0].position,"y",-50,50,.001)
+        box1.add(threeFizWorld.boxes[0].mesh.rotation,'z',-Math.PI,Math.PI,.0001).name('r z');
+
+        box2.add(threeFizWorld.boxes[0].velocity,"x",-500,500,.01)
+        box2.add(threeFizWorld.boxes[0].velocity,"y",-500,500,.01)
+        box2.add(threeFizWorld.boxes[0].velocity,"z",-500,500,.01)
+        box2.add(threeFizWorld.boxes[0].rotation,'x',-Math.PI,Math.PI,.0001).name('r x');
+        box2.add(threeFizWorld.boxes[0].rotation,'y',-Math.PI,Math.PI,.0001).name('r y');
+        box2.add(threeFizWorld.boxes[0].rotation,'z',-Math.PI,Math.PI,.0001).name('r z');
         document.body.appendChild(document.createElement("p"))
         document.body.appendChild(document.createElement("p"))
 
 
         //scenario
 
-        threeFizWorld.boxes[0].rotation.z = .01
-        // threeFizWorld.boxes[0].rotation.y = .3
-        // threeFizWorld.boxes[1].rotation.z = Math.PI/4
-        // threeFizWorld.boxes[1].rotation.y = Math.PI/4 - .165
+        threeFizWorld.boxes[0].rotation.z = -.4
+        threeFizWorld.boxes[0].rotation.y = .3
+        // threeFizWorld.boxes[0].rotation.x = Math.PI/4 -.1
+        // threeFizWorld.boxes[1].rotation.z = Math.PI/4 + .400
+        // threeFizWorld.boxes[1].rotation.y = Math.PI/4 - .450
 
-        threeFizWorld.boxes[0].position.set(100,35, 0)
+        threeFizWorld.boxes[0].position.set(100,45, 10)
         threeFizWorld.boxes[1].position.set(0,0,0)
 
         threeFizWorld.boxes[0].velocity.set(-1500,-600,0)
