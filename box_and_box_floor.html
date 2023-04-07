@@ -75,9 +75,10 @@
 
         //Scene
         const threeFizWorld = new ThreeFiz(scene)
+        // threeFizWorld.GRAVITY.set(0,-1,0)
         let ilosc = 1
         for(let i = 0; i< ilosc; i++){
-            threeFizWorld.addBox(new THREE.Mesh(boxGeo,boxMat), 10)
+            threeFizWorld.addBox(new THREE.Mesh(boxGeo,boxMat), 100)
         }
         // load('./models/bowl.glb')
         // load('./models/collision-world.glb')
@@ -89,7 +90,7 @@
         threeFizWorld.boxes.forEach((box, idx) => {
             box.position.set(
                 Math.random() * 50 - 10,
-                Math.random() * 50 - 10 + 20,
+                150,
                 Math.random() * 50 - 10
             )
             })
@@ -112,15 +113,16 @@
         const gui = new dat.GUI();
         gui.add(threeFizWorld.boxes[1].position,"y",-50,50,.001).name('floor y');
         gui.add(threeFizWorld.boxes[1].position,"x",-50,50,.001).name('floor x');
-        gui.add(threeFizWorld.boxes[1].rotation,'z',-Math.PI,Math.PI,.0001).name('floor rotate');
+        gui.add(threeFizWorld.boxes[1].rotation,'z',-Math.PI,Math.PI,.0001).name('floor rotate z');
+        gui.add(threeFizWorld.boxes[1].rotation,'x',-Math.PI,Math.PI,.0001).name('floor rotate x');
         document.body.appendChild(document.createElement("p"))
         document.body.appendChild(document.createElement("p"))
 
 
         //scenario
-        threeFizWorld.boxes[0].rotation.z = Math.PI/4 + .1
-        // threeFizWorld.boxes[0].rotation.y = Math.PI/4
-        // threeFizWorld.boxes[0].rotation.x = Math.PI/4
+        threeFizWorld.boxes[0].rotation.z = .5 
+        threeFizWorld.boxes[0].rotation.y = .5
+        threeFizWorld.boxes[0].rotation.x = .5
         // threeFizWorld.boxes[0].rotation.y = -.9
 
         function loopBox(){
@@ -128,7 +130,7 @@
                 if(box.position.y < -1000) {
                     box.position.set(
                         Math.random() * 50 - 10,
-                        11 * idx + 100,
+                        150,
                         Math.random() * 50 - 10
                     )
                     box.velocity.set(0,0,0)

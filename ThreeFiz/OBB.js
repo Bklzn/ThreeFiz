@@ -66,7 +66,7 @@ class OBBs extends OBB {
                 // console.log("v-v")
                 diff = containsPoints2[0].clone().sub(containsPoints1[0]).divideScalar(2)
                 point = containsPoints1[0].clone().add(diff)
-                normal = this.center.clone().sub(point).normalize()
+                normal = this.calcNormalByPoint(obb, point)
                 depth = this.calcDepth(point, normal, obb)
                 break;
             case l1 == 1 && l2 == 0:

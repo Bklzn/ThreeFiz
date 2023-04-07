@@ -181,60 +181,62 @@ class ThreeFiz{
                 if(box1 !== box2 && idx2 > idx1){
                     if(box1.collider.intersectsOBB(box2.collider)){
                         const collisionPoint = box1.collider.collisionPoint(box2.collider)
-                        // console.log(box1.position.clone())
-                        // console.log("normal")
-                        // console.log(collisionPoint.normal)
-                        // this.iterate++
-                        this.arrow.position.copy(collisionPoint.point)
-                        // console.log(collisionPoint.depth)
-                        // console.log(box2.collider.calcNormals(box1.collider, collisionPoint.point).test[0])
-                        // this.arrow.setDirection(box1.collider.calcNormals(box2.collider, collisionPoint.point).test[0].face.normal)
-                        this.arrow.setDirection(collisionPoint.normal)
                         this.red.position.copy(collisionPoint.point)
-                        // this.yellow.position.copy(collisionPoint.toTest[1].r[0])
-                        // this.blue.position.copy(collisionPoint.toTest[1].r[1])
-
-                        // return
-                        const damping = Math.exp( - 1.1 * dT)
-                        let restitution = .27
+                        const damping = Math.exp(- 1.1 * dT/500)
+                        let restitution = .5
                         let friction = .5
                         let box1params = box1.mesh.geometry.parameters
                         let box2params = box1.mesh.geometry.parameters
-                        let inertiaTensor1 = new THREE.Matrix3().set(
-                            (box1.mass * (box1params.height**2 + box1params.depth**2))/12, 0, 0,
-                            0, (box1.mass * (box1params.width**2 + box1params.height**2))/12, 0,
-                            0, 0, (box1.mass * (box1params.width**2 + box1params.depth**2))/12).invert()
-                        let inertiaTensor2 = new THREE.Matrix3().set(
+                        let I1 = new THREE.Matrix3().set(
+                            (box1.mass/12) * (box1params.height**2 + box1params.depth**2), 0, 0,
+                            0, (box1.mass/12) * (box1params.width**2 + box1params.height**2), 0,
+                            0, 0, (box1.mass/12) * (box1params.width**2 + box1params.depth**2)).invert()
+                        let M1 = new THREE.Matrix3().set(
+                                box1.mass, 0, 0,
+                                0, box1.mass, 0,
+                                0, 0, box1.mass,)
+                        let I2 = new THREE.Matrix3().set(
                             (box2.mass * (box2params.height**2 + box2params.depth**2))/12, 0, 0,
                             0, (box2.mass * (box2params.width**2 + box2params.height**2))/12, 0,
                             0, 0, (box2.mass * (box2params.width**2 + box2params.depth**2))/12).invert()
-                        let r1 = collisionPoint.point.clone().sub(box1.position)
-                        let t1 = r1.clone().normalize()
-                        let r2 = collisionPoint.point.clone().sub(box2.position)
-                        let t2 = r2.clone().normalize()
+                        let M2 = new THREE.Matrix3().set(
+                            box2.mass, 0, 0,
+                            0, box2.mass, 0,
+                            0, 0, box2.mass,)
+                        let m1 = new THREE.Matrix4().setFromMatrix3(box1.collider.rotation).invert()
+                        let m2 = new THREE.Matrix4().setFromMatrix3(box2.collider.rotation).invert()
+                        let r1 = collisionPoint.point.clone().sub(box1.position.clone()).applyMatrix4(m1)
+                        let r2 = collisionPoint.point.clone().sub(box2.position.clone()).applyMatrix4(m1)
                         let relV = (box1.velocity.clone().add(box1.rotationVelocity.clone().cross(r1))).dot(collisionPoint.normal) // static
-                        const jN = (-(1 + Math.E)*(relV))
-                        const jD = 1/box1.mass + 0 + ((r1.clone().cross(collisionPoint.normal).applyMatrix3(inertiaTensor1)).cross(r1)).dot(collisionPoint.normal) // static
-                        const J = jN/jD
-                        const jT = box1.velocity.clone().multiplyScalar(-1).dot(t1)/1/box1.mass + (r1.clone().cross(t1).cross(r1).applyMatrix3(inertiaTensor1)).dot(t1)
-                        const newRot1 = r1.clone().cross(collisionPoint.normal.clone().multiplyScalar(J).applyMatrix3(inertiaTensor1))
-                        const newVel1 = collisionPoint.normal.clone().multiplyScalar(J/box1.mass)
-                        newVel1.addScaledVector(t1, jT * friction)
-                        if (this.iterate > 0 ){
-                            box1.velocity.set(0,0,0)
-                            box1.rotationVelocity.set(0,0,0)
-                            return
-                        }
-                        // this.iterate++
+                        const jN = -(1 + restitution)*(relV)
+                        const jD = 1/box1.mass + 0 + (((r1.clone().cross(collisionPoint.normal)).applyMatrix3(I1)).cross(r1)).dot(collisionPoint.normal) // static
+                        const j = (jN/jD)
+                        const newVel1 = collisionPoint.normal.clone().multiplyScalar(j/box1.mass)
+                        const newRot1 = (r1.clone().cross(collisionPoint.normal.clone().multiplyScalar(j)).applyMatrix3(I1))
+                        
+                        const V = new THREE.Vector4().set(box1.velocity, box1.rotationVelocity, box2.velocity, box2.rotationVelocity)
+                        // const V = new THREE.Vector4().set(box1.velocity, box1.rotationVelocity, box2.velocity, box2.rotationVelocity)
+                        const m0 = new THREE.Matrix3().set(0, 0, 0, 0, 0, 0, 0, 0, 0)
+                        const M = new THREE.Matrix4().set(
+                            M1, m0 ,m0, m0,
+                            m0, I1, m0, m0,
+                            m0, m0, M2, m0,
+                            m0, m0, m0, I2).invert()
+                        const deltaV = M
+                        const C = collisionPoint.point.clone().dot(collisionPoint.normal.clone())
+                        box1.position.add( collisionPoint.normal.clone().multiplyScalar( collisionPoint.depth )) // 2x lub więce ze wzgledu na statyczny box2
 
-                        box1.position.add( collisionPoint.normal.clone().multiplyScalar( collisionPoint.depth)) // 2x lub więce ze wzgledu na statyczny box2
-
-                        box1.velocity.addScaledVector(newVel1, Math.max(restitution,.27) * damping)
-                        box1.rotationVelocity.addScaledVector(newRot1, .1 *  Math.max(restitution,.27) * (damping * restitution))
+                        // let t1 = r1.clone().normalize()
+                        let t1 = box1.velocity.clone().sub(this.GRAVITY).addScaledVector(newRot1, restitution).normalize().negate()
+                        const jT = (box1.velocity.clone().negate().dot(t1) * friction)/(1/box1.mass + (r1.clone().cross(t1).cross(r1).applyMatrix3(I1)).dot(t1))
+                        newVel1.addScaledVector(t1.clone().normalize(), 1)
+                        box1.rotationVelocity.addScaledVector(newRot1, 1)
+                        box1.velocity.addScaledVector(newVel1, 1)
+                        
+                        this.arrow.position.copy(box1.position)
+                        this.arrow.setDirection(box1.velocity.clone().sub(this.GRAVITY).normalize())
                         // box1.velocity.set(0,0,0)
                         // box1.rotationVelocity.set(0,0,0)
-                        // console.log(box1.position.clone())
-
                     }
                 }
             })
