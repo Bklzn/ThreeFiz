@@ -32,7 +32,7 @@ class OBBs extends OBB {
                         depth = this.calcDepth(point, normal, obb)
                         break;
                     case 4:
-                        distance=0
+                        distance = 0
                         for(let i = 0; i<collidingPoints.length;i++){
                             for(let j = i + 1; j<collidingPoints.length; j++){
                                 if(collidingPoints[i].pC.distanceTo(collidingPoints[j].pC) > distance){
@@ -48,7 +48,7 @@ class OBBs extends OBB {
                         depth = this.calcDepth(point, normal, obb)
                         break;
                     default:
-                        console.log("00")
+                        // console.log("00")
                         let ray1 = new Ray(this.center.clone(), obb.center.clone().sub(this.center).normalize())
                         let ray2 = new Ray(obb.center.clone(), this.center.clone().sub(obb.center).normalize())
                         let interPoint1 = new Vector3().copy(this.center.clone())
@@ -132,7 +132,6 @@ class OBBs extends OBB {
                         normal = obb.calcNormalByPoint(this, point).negate()
                         break
                 }
-                // normal = this.calcNormals(this.getFaces(), point).edge
                 depth = this.calcDepth(point, normal, obb)
                 break;
             case l1 == 0 && l2 == 2:
@@ -156,7 +155,7 @@ class OBBs extends OBB {
                 }
                 diff = v2.clone().sub(v1).divideScalar(2)
                 point = v1.clone().add(diff)
-                normal = this.calcNormals(this.getFaces(), point).face
+                normal = this.calcNormalByPoint(this, point)
                 depth = this.calcDepth(point, normal, obb)
                 break;
         }

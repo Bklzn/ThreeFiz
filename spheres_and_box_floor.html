@@ -78,13 +78,12 @@
         const threeFizWorld = new ThreeFiz(scene)
         let ilosc = 10
         for(let i = 0; i< ilosc/2; i++){
-            threeFizWorld.addSphere(new THREE.Mesh(sphereGeo,sphereMat), 10, 20)
-            threeFizWorld.addSphere(new THREE.Mesh(sphereGeo,sphereMat2), 10, 20)
+            threeFizWorld.addSphere(new THREE.Mesh(sphereGeo,sphereMat), 10, .2)
+            threeFizWorld.addSphere(new THREE.Mesh(sphereGeo,sphereMat2), 10, .9)
         }
         // load('./models/bowl.glb')
         // load('./models/collision-world.glb')
-        threeFizWorld.addBox(new THREE.Mesh(flGeo,flMat), 10)
-        threeFizWorld.setWorld(threeFizWorld.boxes[0])
+        threeFizWorld.addBox(new THREE.Mesh(flGeo,flMat), 10, .2, true)
         threeFizWorld.init()
 
         // threeFizWorld.boxes[0].mesh.rotation.z = .3
