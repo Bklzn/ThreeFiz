@@ -75,7 +75,7 @@
         const helplight= new THREE.PointLightHelper(light);
 
         //Scene
-        const threeFizWorld = new ThreeFiz(scene)
+        const threeFizWorld = new ThreeFiz(scene, camera)
         let ilosc = 10
         for(let i = 0; i< ilosc/2; i++){
             threeFizWorld.addSphere(new THREE.Mesh(sphereGeo,sphereMat), 10, .2)
@@ -83,7 +83,11 @@
         }
         // load('./models/bowl.glb')
         // load('./models/collision-world.glb')
-        threeFizWorld.addBox(new THREE.Mesh(flGeo,flMat), 10, .2, true)
+        threeFizWorld.addBox({mesh:
+            new THREE.Mesh(flGeo,flMat),
+            mass: 10,
+            restitution:.2,
+            isStatic: true})
         threeFizWorld.init()
 
         // threeFizWorld.boxes[0].mesh.rotation.z = .3

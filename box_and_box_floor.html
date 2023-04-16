@@ -24,6 +24,7 @@
     <script type="module">
         import * as THREE from 'three';
         import ThreeFiz from './ThreeFiz/ThreeFiz.js'
+        import Grabber from './ThreeFiz/Grabber.js'
         import { GLTFLoader } from './threejs/three/examples/jsm/loaders/GLTFLoader.js';
         import { OrbitControls } from './threejs/three/examples/jsm/controls/OrbitControls.js';
         import * as dat from './threejs/three/examples/jsm/libs/lil-gui.module.min.js';
@@ -39,11 +40,10 @@
         let controls = new OrbitControls( camera, renderer.domElement );
         renderer.setSize(window.innerHeight, window.innerWidth);
         document.body.appendChild( renderer.domElement);
-
         const handleResize = () =>{
             const {innerWidth, innerHeight} = window;
-            renderer.setSize(innerWidth,innerHeight-100);
-            camera.aspect = innerWidth / (innerHeight-100);
+            renderer.setSize(innerWidth,innerHeight - 100);
+            camera.aspect = innerWidth / (innerHeight - 100);
             camera.updateProjectionMatrix();
         };
 
@@ -82,9 +82,9 @@
             isStatic: true
             })
         // threeFizWorld.GRAVITY.set(0,-1,0)
-        let ilosc = 2
+        let ilosc = 1
         for(let i = 0; i< ilosc; i++){
-            threeFizWorld.addBox({mesh:new THREE.Mesh(boxGeo,boxMat),
+            threeFizWorld.addBox({mesh:new THREE.Mesh(boxGeo.clone(),boxMat.clone()),
             mass: 10,
             restitutuion: .2})
         }
@@ -92,6 +92,15 @@
         // load('./models/collision-world.glb')
         // threeFizWorld.setWorld(threeFizWorld.boxes[1])
         let world = threeFizWorld.boxes[0]
+        let grabber = new Grabber({
+            renderer: renderer, 
+            SCENE: scene, 
+            CAMERA: camera, 
+            cameraControls: controls,
+            objectsToGrab: [
+            threeFizWorld.boxes[1],
+            // threeFizWorld.boxes[2],
+        ]})
         threeFizWorld.init()
 
         // world.rotation.z = .1
@@ -174,6 +183,7 @@
                 z${threeFizWorld.boxes[1].velocity.z.toFixed(2)}
             )
             `
+            grabber.update(13)
             threeFizWorld.update()
             controls.update();
             stats.update();
@@ -183,6 +193,9 @@
         };
         handleResize();
         loop();
+        window.addEventListener('mousemove', grabber.controls.bind(grabber))
+        window.addEventListener('mousedown', grabber.controls.bind(grabber))
+        window.addEventListener('mouseup', grabber.controls.bind(grabber))
         window.addEventListener('resize',handleResize);
 
     </script>
