@@ -50,7 +50,7 @@ class ThreeFiz{
             this.arrow
         )
     }
-    addSphere(mesh, mass, restitution, world = false){
+    addSphere({mesh, mass = 1, restitution = .2, isStatic = false}){
         let sphere = {
             mesh: mesh,
             collider: new THREE.Sphere(new THREE.Vector3(0,0,0), 0),
@@ -59,7 +59,7 @@ class ThreeFiz{
             force: new THREE.Vector3(),
             mass: mass,
             restitution: restitution,
-            world: world
+            isStatic: isStatic
         }
         sphere.collider.radius = sphere.mesh.geometry.parameters.radius
         console.log(sphere)
@@ -101,10 +101,18 @@ class ThreeFiz{
     //     world.collider.fromGraphNode(world.mesh)
     //     this.world = world
     // }
+    gravity(obj){
+        let g = this.GRAVITY
+        if(g.radial && g.force){
+            if(g.radial.isVector3)  return new Vector3().copy(g.radial).sub(obj.position).normalize().multiplyScalar(g.force)
+        }
+        if(g.isVector3) return g.clone()
+        return new Vector3(0, 0, 0)
+    }
     updateObjects(time){
         this.spheres.forEach((sphere) => {
-            if (sphere != this.world){
-                sphere.velocity.add(this.GRAVITY.clone())
+            if (!sphere.isStatic){
+                sphere.velocity.add(this.gravity(sphere))
                 sphere.position.addScaledVector(sphere.velocity.clone(), time)
             }
             sphere.collider.center.copy(sphere.position)
@@ -164,12 +172,14 @@ class ThreeFiz{
                         const depth = sphere1.collider.center.clone().sub(sphere2.collider.center.clone()).length()
                         const radii = sphere1.collider.radius + sphere2.collider.radius
                         const d = ( radii - depth) / 2;
-
-                        sphere1.position.addScaledVector( normal.clone(), d )
-                        sphere2.position.addScaledVector( normal.clone(), -d )
-
-                        sphere1.velocity.addScaledVector(normal, -dot * 0.5 )
-                        sphere2.velocity.addScaledVector(normal, dot * 0.5 )
+                        if(!sphere1.isStatic){
+                            sphere1.position.addScaledVector( normal.clone(), d )
+                            sphere1.velocity.addScaledVector(normal, -dot * 0.5 )
+                        }
+                        if(!sphere2.isStatic){
+                            sphere2.position.addScaledVector( normal.clone(), -d )
+                            sphere2.velocity.addScaledVector(normal, dot * 0.5 )
+                        }
                    }
                 }
             })
