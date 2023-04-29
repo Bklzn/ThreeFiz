@@ -14,6 +14,9 @@ class Grabber {
         this.renderer = renderer
         this.grabbed = null
         this.cameraControls = cameraControls
+        window.addEventListener('mousemove', this.controls.bind(this))
+        window.addEventListener('mousedown', this.controls.bind(this))
+        window.addEventListener('mouseup', this.controls.bind(this))
     }
     controls(event){
         event.preventDefault();
@@ -31,8 +34,8 @@ class Grabber {
             this.cameraControls.enabled = true;
         }
     }
-    update(dt) {
-        this.time += dt;
+    update() {
+        this.time += 13;
         if(this.grabbed) {
             let pos = this.raycaster.ray.origin.clone();
             pos.addScaledVector(this.raycaster.ray.direction, this.distance);

@@ -1,6 +1,6 @@
 import * as THREE from 'three';
-import { Octree } from '../threejs/three/examples/jsm/math/Octree.js';
-import { OBBs } from '../ThreeFiz/OBB.js';
+import { Octree } from '../examples/jsm/math/Octree.js';
+import { OBBs } from './OBB.js';
 import { Ray, Vector3 } from 'three';
 
 class ThreeFiz{
@@ -161,6 +161,7 @@ class ThreeFiz{
             }
         })
     }
+
     spheresCollisions(){
         this.spheres.forEach((sphere1, idx1) => {
             this.spheres.forEach((sphere2, idx2) => {
@@ -172,25 +173,26 @@ class ThreeFiz{
                         const depth = sphere1.collider.center.clone().sub(sphere2.collider.center.clone()).length()
                         const radii = sphere1.collider.radius + sphere2.collider.radius
                         const d = ( radii - depth) / 2;
+                        const restitution = (sphere1.restitution + sphere2.restitution)/2
                         if(!sphere1.isStatic){
                             sphere1.position.addScaledVector( normal.clone(), d )
-                            sphere1.velocity.addScaledVector(normal, -dot * 0.5 )
+                            sphere1.velocity.addScaledVector(normal, -dot * restitution )
                         }
                         if(!sphere2.isStatic){
                             sphere2.position.addScaledVector( normal.clone(), -d )
-                            sphere2.velocity.addScaledVector(normal, dot * 0.5 )
+                            sphere2.velocity.addScaledVector(normal, dot * restitution )
                         }
                    }
                 }
             })
         })
     }
-    sphereBoxCollisions(dT){
+    
+    sphereBoxCollisions(){
         this.boxes.forEach((box) => {
             this.spheres.forEach((sphere) => {
                 if(box.collider.intersectsSphere(sphere.collider)){
                     const closestPoint = new THREE.Vector3()
-                    const damping = Math.exp(- 1.1 * dT)
                     box.collider.clampPoint(sphere.collider.center, closestPoint)
                     const collision = {
                         normal: sphere.collider.center.clone().sub(closestPoint).normalize(),
@@ -211,8 +213,8 @@ class ThreeFiz{
                     }
                     let relV = relSphere.sub(relBox)
                     const dot = relV.dot(collision.normal)
-
-                    const jN = -(1 + ((box.restitution + sphere.restitution)/2))*(dot)
+                    const restitution = (box.restitution + sphere.restitution)/2
+                    const jN = -(1 + restitution)*(dot)
                     const jD = boxM + sphereM + (jBox).dot(collision.normal)
                     const j = (jN/jD)
                     const boxvel = collision.normal.clone().multiplyScalar(j/box.mass)
@@ -220,17 +222,18 @@ class ThreeFiz{
                     
                     if(!box.isStatic){
                         box.position.add( collision.normal.clone().multiplyScalar( collision.depth ))
-                        box.rotationVelocity.addScaledVector(boxrot, 1 * damping)
-                        box.velocity.addScaledVector(boxvel, 1 * damping)
+                        box.rotationVelocity.addScaledVector(boxrot, 1)
+                        box.velocity.addScaledVector(boxvel, 1)
                     }
                     if(!sphere.isStatic){
                         sphere.position.add( collision.normal.clone().multiplyScalar( collision.depth ))
-                        sphere.velocity.addScaledVector(collision.normal, -dot * (1 + sphere.restitution)) // 1.5 to sprężystość, 2 = 100% odbitej energii + damping
+                        sphere.velocity.addScaledVector(collision.normal, -dot * (1 + restitution))
                     }
                 }
             })
         })
     }
+
     boxesCollisions(dT){
         this.boxes.forEach((box1, idx1) => {
             this.boxes.forEach((box2, idx2) => {

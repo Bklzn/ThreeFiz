@@ -1,5 +1,5 @@
 import { Vector3,Matrix4,Ray, Plane } from 'three';
-import { OBB } from '../threejs/three/examples/jsm/math/OBB.js';
+import { OBB } from '../examples/jsm/math/OBB.js';
 
 class OBBs extends OBB {
     collisionPoint( obb ) {
@@ -48,7 +48,6 @@ class OBBs extends OBB {
                         depth = this.calcDepth(point, normal, obb)
                         break;
                     default:
-                        // console.log("00")
                         let ray1 = new Ray(this.center.clone(), obb.center.clone().sub(this.center).normalize())
                         let ray2 = new Ray(obb.center.clone(), this.center.clone().sub(obb.center).normalize())
                         let interPoint1 = new Vector3().copy(this.center.clone())
@@ -63,41 +62,35 @@ class OBBs extends OBB {
                 }
                 break;
             case l1 == 1 && l2 == 1:
-                // console.log("v-v")
                 diff = containsPoints2[0].clone().sub(containsPoints1[0]).divideScalar(2)
                 point = containsPoints1[0].clone().add(diff)
                 normal = this.calcNormalByPoint(obb, point)
                 depth = this.calcDepth(point, normal, obb)
                 break;
             case l1 == 1 && l2 == 0:
-                // console.log("l1 1")
                 edgePoints = obb.pointOnEdges( this )
                 toTest = edgePoints
                 point = containsPoints1[0]
                 switch(edgePoints.length)
                 {
                     case 2:
-                        // console.log("c 2")
                         diff = edgePoints[1].pC.clone().sub(point).divideScalar(2)
                         point = containsPoints1[0].clone().add(diff)
                         normal = this.calcNormalByVertices(edgePoints[0].r, [point], point)
                         break
                     default:
-                        // console.log("c d")
                         normal = this.calcNormalByPoint(obb, point)
                         break
                 }
                 depth = this.calcDepth(point, normal, obb)
                 break
             case l1 == 2 && l2 == 0:
-                // console.log("l1 2")
                 diff = containsPoints1[1].clone().sub(containsPoints1[0]).divideScalar(2)
                 point = containsPoints1[0].clone().add(diff)
                 normal = this.calcNormalByPoint(obb, point)
                 depth = this.calcDepth(point, normal, obb)
                 break;
             case l1 > 2:
-                // console.log("l1")
                 distance=0
                 for(let i = 0; i<containsPoints1.length;i++){
                     for(let j = i + 1; j<containsPoints1.length; j++){
@@ -115,34 +108,29 @@ class OBBs extends OBB {
                 break;
 
             case l1 == 0 && l2 == 1:
-                // console.log("l2 1")
                 edgePoints = this.pointOnEdges( obb )
                 toTest = edgePoints
                 point = containsPoints2[0]
                 switch(edgePoints.length)
                 {
                     case 2:
-                        // console.log("c 2")
                         diff = edgePoints[1].pC.clone().sub(point).divideScalar(2)
                         point = containsPoints2[0].clone().add(diff)
                         normal = this.calcNormalByVertices(edgePoints[0].r, [point], point)
                         break
                     default:
-                        // console.log("c d")
                         normal = obb.calcNormalByPoint(this, point).negate()
                         break
                 }
                 depth = this.calcDepth(point, normal, obb)
                 break;
             case l1 == 0 && l2 == 2:
-                // console.log("l2 2")
                 diff = containsPoints2[1].clone().sub(containsPoints2[0]).divideScalar(2)
                 point = containsPoints2[0].clone().add(diff)
                 normal = this.calcNormalByPoint(this, point)
                 depth = this.calcDepth(point, normal, obb)
                 break;
             case l2 > 2:
-                // console.log("l2")
                 distance=0
                 for(let i = 0; i<containsPoints2.length;i++){
                     for(let j = i + 1; j<containsPoints2.length; j++){

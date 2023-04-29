@@ -16,19 +16,17 @@
 	<script type="importmap">
         {
             "imports": {
-                "three": "../threejs/three/build/three.module.js"
+                "three": "./three/build/three.module.js"
             }
         }
     </script>
-    <script type="module" src='ThreeFiz/ThreeFiz.js'></script>
     <script type="module">
         import * as THREE from 'three';
-        import ThreeFiz from './ThreeFiz/ThreeFiz.js'
-        import Grabber from './ThreeFiz/Grabber.js'
-        import { GLTFLoader } from './threejs/three/examples/jsm/loaders/GLTFLoader.js';
-        import { OrbitControls } from './threejs/three/examples/jsm/controls/OrbitControls.js';
-        import * as dat from './threejs/three/examples/jsm/libs/lil-gui.module.min.js';
-        import Stats from './threejs/three/examples/jsm/libs/stats.module.js';
+        import ThreeFiz from './three/ThreeFiz/ThreeFiz.js'
+        import Grabber from './three/ThreeFiz/Grabber.js'
+        import { OrbitControls } from './three/examples/jsm/controls/OrbitControls.js';
+        import * as dat from './three/examples/jsm/libs/lil-gui.module.min.js';
+        import Stats from './three/examples/jsm/libs/stats.module.js';
 
         //init
         let scene = new THREE.Scene();
@@ -128,7 +126,7 @@
 
         controls.update();
         const loop = () =>{
-            grabber.update(13)
+            grabber.update()
             threeFizWorld.update()
             threeFizWorld.GRAVITY = {
                 radial: staticObj.position,
@@ -142,9 +140,6 @@
         };
         handleResize();
         loop();
-        window.addEventListener('mousemove', grabber.controls.bind(grabber))
-        window.addEventListener('mousedown', grabber.controls.bind(grabber))
-        window.addEventListener('mouseup', grabber.controls.bind(grabber))
         window.addEventListener('resize',handleResize);
 
     </script>

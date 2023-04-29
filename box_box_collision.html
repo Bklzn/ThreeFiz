@@ -16,18 +16,17 @@
 	<script type="importmap">
         {
             "imports": {
-                "three": "../threejs/three/build/three.module.js"
+                "three": "./three/build/three.module.js"
             }
         }
     </script>
-    <script type="module" src='ThreeFiz/ThreeFiz.js'></script>
     <script type="module">
         import * as THREE from 'three';
-        import ThreeFiz from './ThreeFiz/ThreeFiz.js'
-        import { GLTFLoader } from './threejs/three/examples/jsm/loaders/GLTFLoader.js';
-        import { OrbitControls } from './threejs/three/examples/jsm/controls/OrbitControls.js';
-        import * as dat from './threejs/three/examples/jsm/libs/lil-gui.module.min.js';
-        import Stats from './threejs/three/examples/jsm/libs/stats.module.js';
+        import ThreeFiz from './three/ThreeFiz/ThreeFiz.js'
+        import Grabber from './three/ThreeFiz/Grabber.js'
+        import { OrbitControls } from './three/examples/jsm/controls/OrbitControls.js';
+        import * as dat from './three/examples/jsm/libs/lil-gui.module.min.js';
+        import Stats from './three/examples/jsm/libs/stats.module.js';
 
         //init
         let scene = new THREE.Scene();
@@ -59,8 +58,8 @@
         //Scene
         const threeFizWorld = new ThreeFiz(scene)
 
-        threeFizWorld.addBox(new THREE.Mesh(boxGeo,boxMat), 100,)
-        threeFizWorld.addBox(new THREE.Mesh(boxGeo2,boxMat2), 100,  0.2, true)
+        threeFizWorld.addBox({mesh: new THREE.Mesh(boxGeo,boxMat), mass:100})
+        threeFizWorld.addBox({mesh: new THREE.Mesh(boxGeo2,boxMat2), mass: 100,isStatic:true})
         threeFizWorld.init()
 
         scene.add(

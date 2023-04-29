@@ -16,19 +16,17 @@
 	<script type="importmap">
         {
             "imports": {
-                "three": "../threejs/three/build/three.module.js"
+                "three": "./three/build/three.module.js"
             }
         }
     </script>
-    <script type="module" src='ThreeFiz/ThreeFiz.js'></script>
     <script type="module">
         import * as THREE from 'three';
-        import ThreeFiz from './ThreeFiz/ThreeFiz.js'
-        import Grabber from './ThreeFiz/Grabber.js'
-        import { GLTFLoader } from './threejs/three/examples/jsm/loaders/GLTFLoader.js';
-        import { OrbitControls } from './threejs/three/examples/jsm/controls/OrbitControls.js';
-        import * as dat from './threejs/three/examples/jsm/libs/lil-gui.module.min.js';
-        import Stats from './threejs/three/examples/jsm/libs/stats.module.js';
+        import ThreeFiz from './three/ThreeFiz/ThreeFiz.js'
+        import Grabber from './three/ThreeFiz/Grabber.js'
+        import { OrbitControls } from './three/examples/jsm/controls/OrbitControls.js';
+        import * as dat from './three/examples/jsm/libs/lil-gui.module.min.js';
+        import Stats from './three/examples/jsm/libs/stats.module.js';
 
         //init
         let scene = new THREE.Scene();
@@ -47,23 +45,23 @@
             camera.updateProjectionMatrix();
         };
 
-        const loader = new GLTFLoader();
-        const load = (path) =>{
-            var obj;
-            loader.load(path, function(gltf){
-                obj= gltf.scene;
-                obj.name=path;
-                obj.position.set(0,-100,100)
-                obj.scale.set(200,200,200)
-                threeFizWorld.setWorld(obj);
-                scene.add(obj)
-                console.log(obj);
-                console.log(threeFizWorld.world)
-                // threeFizWorld.octreeHelper({})
-            },function(error){
-                // if(error) console.error(error);
-            });
-        }
+        // const loader = new GLTFLoader();
+        // const load = (path) =>{
+        //     var obj;
+        //     loader.load(path, function(gltf){
+        //         obj= gltf.scene;
+        //         obj.name=path;
+        //         obj.position.set(0,-100,100)
+        //         obj.scale.set(200,200,200)
+        //         threeFizWorld.setWorld(obj);
+        //         scene.add(obj)
+        //         console.log(obj);
+        //         console.log(threeFizWorld.world)
+        //         // threeFizWorld.octreeHelper({})
+        //     },function(error){
+        //         // if(error) console.error(error);
+        //     });
+        // }
         //objects
         let flGeo= new THREE.BoxGeometry(200,1,100);
         let flMat= new THREE.MeshPhongMaterial({color: 0xFF0000, wireframe: true});
