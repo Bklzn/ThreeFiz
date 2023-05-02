@@ -4,14 +4,14 @@ import { OBBs } from './OBB.js';
 import { Ray, Vector3 } from 'three';
 
 class ThreeFiz{
-    constructor(SCENE, CAMERA, CANVAS, TIME_STEP = .1){
+    constructor(scene, TIME_STEP = .1){
         this.dT = 0.0
         this.lastUpdate = Date.now()
         this.accumulator = 0.0
         this.TIME_STEP = TIME_STEP
         this.spheres = []
         this.boxes = []
-        this.SCENE = SCENE
+        this.SCENE = scene
         this.GRAVITY = new THREE.Vector3(0,-10,0)
     }
     init(){

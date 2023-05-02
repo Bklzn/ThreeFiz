@@ -1,8 +1,8 @@
 import * as THREE from 'three';
 class Grabber {
-    constructor({renderer, SCENE, CAMERA, cameraControls = null,  objectsToGrab = []}) {
-        this.SCENE = SCENE
-        this.CAMERA = CAMERA
+    constructor({renderer, scene, camera, cameraControls = null,  objectsToGrab = []}) {
+        this.SCENE = scene
+        this.CAMERA = camera
         this.raycaster = new THREE.Raycaster();
         // this.raycaster.layers.set(1);
         // this.raycaster.params.Line.threshold = 0.1;
