@@ -62,7 +62,6 @@ class ThreeFiz{
             isStatic: isStatic
         }
         sphere.collider.radius = sphere.mesh.geometry.parameters.radius
-        console.log(sphere)
         this.spheres.push(sphere)
     }
     addBox({mesh, mass = 1, restitution = .2, isStatic = false}) {
@@ -173,14 +172,17 @@ class ThreeFiz{
                         const depth = sphere1.collider.center.clone().sub(sphere2.collider.center.clone()).length()
                         const radii = sphere1.collider.radius + sphere2.collider.radius
                         const d = ( radii - depth) / 2;
+                        const M = sphere1.mass + sphere2.mass
+                        const F1 = 2 * sphere1.mass / M
+                        const F2 = 2 * sphere2.mass / M
                         const restitution = (sphere1.restitution + sphere2.restitution)/2
                         if(!sphere1.isStatic){
                             sphere1.position.addScaledVector( normal.clone(), d )
-                            sphere1.velocity.addScaledVector(normal, -dot * restitution )
+                            sphere1.velocity.addScaledVector(normal, -dot * restitution * F1)
                         }
                         if(!sphere2.isStatic){
                             sphere2.position.addScaledVector( normal.clone(), -d )
-                            sphere2.velocity.addScaledVector(normal, dot * restitution )
+                            sphere2.velocity.addScaledVector(normal, dot * restitution * F2)
                         }
                    }
                 }
@@ -208,7 +210,7 @@ class ThreeFiz{
                     }
                     if(!sphere.isStatic){
                         relSphere.copy(sphere.velocity.clone())
-                        sphereM = sphere.mass
+                        sphereM = 1/sphere.mass
                         relSphere = sphere.velocity.clone()
                     }
                     let relV = relSphere.sub(relBox)
@@ -221,9 +223,9 @@ class ThreeFiz{
                     const boxrot = (r.clone().cross(collision.normal.clone().multiplyScalar(j)).applyMatrix3(box.InertiaTensor.clone().invert()))
                     
                     if(!box.isStatic){
-                        box.position.add( collision.normal.clone().multiplyScalar( collision.depth ))
-                        box.rotationVelocity.addScaledVector(boxrot, 1)
-                        box.velocity.addScaledVector(boxvel, 1)
+                        box.position.add( collision.normal.clone().multiplyScalar( -collision.depth ))
+                        box.rotationVelocity.addScaledVector(boxrot, -1)
+                        box.velocity.addScaledVector(boxvel, -1)
                     }
                     if(!sphere.isStatic){
                         sphere.position.add( collision.normal.clone().multiplyScalar( collision.depth ))
@@ -232,6 +234,22 @@ class ThreeFiz{
                 }
             })
         })
+    }
+
+    clampRotation(rotation, min, max) {
+        const x = rotation.x * (Math.PI / 180);
+        const y = rotation.y * (Math.PI / 180);
+        const z = rotation.z * (Math.PI / 180);
+
+        const clampedX = Math.max(Math.min(x, max.x), min.x);
+        const clampedY = Math.max(Math.min(y, max.y), min.y);
+        const clampedZ = Math.max(Math.min(z, max.z), min.z);
+      
+        rotation.set(
+          clampedX * (180 / Math.PI),
+          clampedY * (180 / Math.PI),
+          clampedZ * (180 / Math.PI)
+        );
     }
 
     boxesCollisions(dT){
@@ -244,6 +262,11 @@ class ThreeFiz{
                         //     box1.rotationVelocity.multiplyScalar(.99 + (box1.restitution + box2.restitution)/1000)
                         //     box2.rotationVelocity.multiplyScalar(.99 + (box1.restitution + box2.restitution)/1000)
                         // }
+                        // const min = new Vector3(-180, -180, -90);
+                        // const max = new Vector3(.180, 180, 90);
+
+                        // this.clampRotation(box1.rotationVelocity, min, max);
+                        // this.clampRotation(box2.rotationVelocity, min, max);
                         const collisionPoint = box1.collider.collisionPoint(box2.collider)
                         let friction = .5
                         let m1 = new THREE.Matrix4().setFromMatrix3(box1.collider.rotation).invert()
@@ -280,7 +303,6 @@ class ThreeFiz{
                             box2.rotationVelocity.addScaledVector(box2rot, -damping)
                             box2.velocity.addScaledVector(box2vel, -damping)
                         }
-
                         // this.arrow.position.copy(collisionPoint.point)
                         // this.arrow.setDirection(collisionPoint.normal)
                         // this.red.position.copy(collisionPoint.point)

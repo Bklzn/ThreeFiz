@@ -46,50 +46,23 @@
             camera.updateProjectionMatrix();
         };
 
-        // const loader = new GLTFLoader();
-        // const load = (path) =>{
-        //     var obj;
-        //     loader.load(path, function(gltf){
-        //         obj= gltf.scene;
-        //         obj.name=path;
-        //         obj.position.set(0,-100,100)
-        //         obj.scale.set(200,200,200)
-        //         threeFizWorld.setWorld(obj);
-        //         scene.add(obj)
-        //         console.log(obj);
-        //         console.log(threeFizWorld.world)
-        //         // threeFizWorld.octreeHelper({})
-        //     },function(error){
-        //         // if(error) console.error(error);
-        //     });
-        // }
         //objects
-        let flGeo= new THREE.BoxGeometry(200,1,100);
+        let flGeo= new THREE.BoxGeometry(1000,1,1000);
         let flMat= new THREE.MeshPhongMaterial({color: 0xFF0000});
         let sphereGeo= new THREE.SphereGeometry(10);
         let sphereMat= new THREE.MeshPhongMaterial({color: 0x0000FF});
-        let sphereMat2= new THREE.MeshPhongMaterial({color: 0x00FF00});
+        let boxGeo= new THREE.BoxGeometry(20 ,20, 20);
+        let boxMat= new THREE.MeshPhongMaterial({color: 0x00FF00});
 
         const light= new THREE.PointLight(0xFFFFFF,1);
-        const helplight= new THREE.PointLightHelper(light);
 
         //Scene
-        const threeFizWorld = new ThreeFiz(scene, camera)
-        let ilosc = 10
+        const threeFizWorld = new ThreeFiz(scene)
+        let ilosc = 100
         for(let i = 0; i< ilosc/2; i++){
             threeFizWorld.addSphere({mesh: new THREE.Mesh(sphereGeo,sphereMat)})
-            threeFizWorld.addSphere({mesh: new THREE.Mesh(sphereGeo,sphereMat2), restitution: .9})
+            threeFizWorld.addBox({mesh: new THREE.Mesh(boxGeo,boxMat)})
         }
-        // load('./models/bowl.glb')
-        // load('./models/collision-world.glb')
-        threeFizWorld.addBox({mesh:
-            new THREE.Mesh(flGeo,flMat),
-            mass: 10,
-            restitution:.2,
-            isStatic: true})
-        threeFizWorld.init()
-
-        // threeFizWorld.boxes[0].mesh.rotation.z = .3
         threeFizWorld.spheres.forEach((sphere, idx) => {
             sphere.position.set(
                 Math.random() * 50 - 10,
@@ -97,12 +70,26 @@
                 Math.random() * 50 - 10
             )
             })
+        threeFizWorld.boxes.forEach((box, idx) => {
+            box.position.set(
+                Math.random() * 50 - 10,
+                Math.random() * 50 - 10 + 100,
+                Math.random() * 50 - 10
+            )
+            })
+
+
+        threeFizWorld.addBox({
+            mesh: new THREE.Mesh(flGeo,flMat),
+            mass: 10,
+            restitution:.2,
+            isStatic: true})
+
+        threeFizWorld.init()
         scene.add(
-            // new THREE.BoxHelper(threeFizWorld.boxes[0].collider, 0xffff00),
             light,
-            helplight,
         );
-        camera.position.set(0,50,300);
+        camera.position.set(0,150,500);
         light.position.set(50,150,50);
 
         //Debug
@@ -116,13 +103,10 @@
         gui.add(threeFizWorld.boxes[0].position,"y",-50,50,.001).name('floor y');
         gui.add(threeFizWorld.boxes[0].position,"x",-50,50,.001).name('floor x');
         gui.add(threeFizWorld.boxes[0].rotation,'z',-Math.PI,Math.PI,.0001).name('floor rotate');
-        document.body.appendChild(document.createElement("p"))
-        // document.body.appendChild(document.createElement("p"))
-
 
         //scenario
 
-        function loopBall(){
+        function loopObj(){
             threeFizWorld.spheres.forEach((sphere, idx) => {
                 if(sphere.position.y < -1000) {
                     sphere.position.set(
@@ -133,36 +117,26 @@
                     sphere.velocity.set(0,0,0)
                 }
             })
+            threeFizWorld.boxes.forEach((box, idx) => {
+                if(box.position.y < -1000) {
+                    box.position.set(
+                        Math.random() * 50 - 10,
+                        11 * idx + 100,
+                        Math.random() * 50 - 10
+                    )
+                    box.velocity.set(0,0,0)
+                    box.rotation.set(0,0,0)
+                }
+            })
         }
 
         controls.update();
         const loop = () =>{
-            // threeFizWorld.boxes[0].velocity.set(0,170,0)
             threeFizWorld.update()
-            // document.getElementsByTagName("p")[0].innerHTML = `blue: 
-            // x${threeFizWorld.spheres[0].collider.center.x.toFixed(2)} 
-            // y${threeFizWorld.spheres[0].collider.center.y.toFixed(2)} 
-            // z${threeFizWorld.spheres[0].collider.center.z.toFixed(2)}
-            // <br>V: (
-            //     x${threeFizWorld.spheres[0].velocity.x.toFixed(2)} 
-            //     y${threeFizWorld.spheres[0].velocity.y.toFixed(2)} 
-            //     z${threeFizWorld.spheres[0].velocity.z.toFixed(2)}
-            // )
-            // `
-            // document.getElementsByTagName("p")[1].innerHTML = `green: 
-            // x${threeFizWorld.spheres[1].collider.center.x.toFixed(2)} 
-            // y${threeFizWorld.spheres[1].collider.center.y.toFixed(2)} 
-            // z${threeFizWorld.spheres[1].collider.center.z.toFixed(2)} 
-            // <br>V: (
-            //     x${threeFizWorld.spheres[1].velocity.x.toFixed(2)} 
-            //     y${threeFizWorld.spheres[1].velocity.y.toFixed(2)} 
-            //     z${threeFizWorld.spheres[1].velocity.z.toFixed(2)}
-            // )
-            // `
             controls.update();
             stats.update();
             renderer.render(scene,camera);
-            loopBall()
+            loopObj()
             requestAnimationFrame(loop)
         };
         handleResize();
