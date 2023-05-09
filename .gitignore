@@ -1,6 +1,5 @@
 ## Ignore three.js files
 threejs
-three/*
 !three/ThreeFiz
 
 ## Ignore Visual Studio temporary files, build results, and
