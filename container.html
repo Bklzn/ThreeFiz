@@ -13,6 +13,7 @@
     </style>
 </head>
 <body>
+    <span style="position: absolute; left: 80%"> click & hold - grabbing</span>
 	<script type="importmap">
         {
             "imports": {
@@ -47,7 +48,8 @@
         };
 
         //objects
-        let flGeo= new THREE.BoxGeometry(1000,1,1000);
+        let flGeo= new THREE.BoxGeometry(350,1,350);
+        let wallGeo= new THREE.BoxGeometry(15,50,1);
         let flMat= new THREE.MeshPhongMaterial({color: 0xFF0000});
         let sphereGeo= new THREE.SphereGeometry(10);
         let sphereMat= new THREE.MeshPhongMaterial({color: 0x0000FF});
@@ -58,26 +60,56 @@
 
         //Scene
         const threeFizWorld = new ThreeFiz(scene)
-        let ilosc = 100
-        for(let i = 0; i< ilosc/2; i++){
-            threeFizWorld.addSphere({mesh: new THREE.Mesh(sphereGeo,sphereMat)})
-            threeFizWorld.addBox({mesh: new THREE.Mesh(boxGeo,boxMat)})
+        let obj = 100
+        let sciany = 85
+        for(let i = 0; i< obj; i++){
+            let randomRadius = Math.random() * (15 - 5) + 5
+            threeFizWorld.addSphere({mesh: new THREE.Mesh(new THREE.SphereGeometry(randomRadius),sphereMat)})
+        }
+        for(let i = 0; i< sciany; i++){
+            threeFizWorld.addBox({mesh: new THREE.Mesh(wallGeo,flMat), isStatic: true})
         }
         threeFizWorld.spheres.forEach((sphere, idx) => {
             sphere.position.set(
                 Math.random() * 50 - 10,
-                Math.random() * 50 - 10 + 100,
-                Math.random() * 50 - 10
-            )
-            })
-        threeFizWorld.boxes.forEach((box, idx) => {
-            box.position.set(
+                11 * idx + 100,
                 Math.random() * 50 - 10,
-                Math.random() * 50 - 10 + 100,
-                Math.random() * 50 - 10
             )
-            })
+        })
+        threeFizWorld.boxes.forEach((box, idx) => {
+            if(!box.isStatic){
+                box.position.set(
+                    Math.random() * 50 - 10,
+                    11 * idx + 100,
+                    Math.random() * 50 - 10,
+                )
+            }
+        })
+        let grabber = new Grabber({
+            renderer: renderer, 
+            scene: scene, 
+            camera: camera, 
+            cameraControls: controls,
+            objectsToGrab: threeFizWorld.spheres
+        })
 
+        //scenario
+        let radius = 200
+        const tiltAngleIncrement = 90 / sciany;
+        threeFizWorld.boxes.forEach((box, idx) => {
+            if(box.isStatic){
+                const angle = (idx / sciany) * Math.PI * 2;
+                const x = 0 + Math.cos(angle) * radius;
+                const z = 0 + Math.sin(angle) * radius;
+                box.position.set(
+                    x,
+                    25,
+                    z
+                )
+                const wallDirection = new THREE.Vector3().subVectors(new THREE.Vector3(0,50,0), box.position);
+                box.rotation.y = Math.atan2(wallDirection.x, wallDirection.z);
+            }
+        })
 
         threeFizWorld.addBox({
             mesh: new THREE.Mesh(flGeo,flMat),
@@ -90,21 +122,7 @@
             light,
         );
         camera.position.set(0,150,500);
-        light.position.set(50,150,50);
-
-        //Debug
-
-        const stats = new Stats();
-        stats.domElement.style.position = 'absolute';
-        stats.domElement.style.top = '0px';
-        document.body.appendChild( stats.domElement );
-
-        const gui = new dat.GUI();
-        gui.add(threeFizWorld.boxes[threeFizWorld.boxes.length-1].rotation,'y',-Math.PI,Math.PI,.0001).name('rotate y');
-        gui.add(threeFizWorld.boxes[threeFizWorld.boxes.length-1].rotation,'x',-Math.PI,Math.PI,.0001).name('rotate x');
-        gui.add(threeFizWorld.boxes[threeFizWorld.boxes.length-1].rotation,'z',-Math.PI,Math.PI,.0001).name('rotate z');
-
-        //scenario
+        light.position.set(50,2050,50);
 
         function loopObj(){
             threeFizWorld.spheres.forEach((sphere, idx) => {
@@ -130,10 +148,18 @@
             })
         }
 
+        //Debug
+
+        const stats = new Stats();
+        stats.domElement.style.position = 'absolute';
+        stats.domElement.style.top = '0px';
+        document.body.appendChild( stats.domElement );
+
         controls.update();
         const loop = () =>{
             threeFizWorld.update()
             controls.update();
+            grabber.update()
             stats.update();
             renderer.render(scene,camera);
             loopObj()
