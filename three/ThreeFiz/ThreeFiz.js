@@ -255,7 +255,7 @@ class ThreeFiz{
     boxesCollisions(dT){
         this.boxes.forEach((box1, idx1) => {
             this.boxes.forEach((box2, idx2) => {
-                if(box1 !== box2 && idx2 > idx1){
+                if(box1 !== box2 && idx2 > idx1 && !(box1.isStatic && box2.isStatic)){
                     if(box1.collider.intersectsOBB(box2.collider)){
                         const damping = Math.exp(- 1 * dT)
                         // if(Math.random() > .3){
