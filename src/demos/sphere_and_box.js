@@ -1,29 +1,7 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset='utf-8'>
-    <meta http-equiv='X-UA-Compatible' content='IE=edge'>
-    <title>Page Title</title>
-    <meta name='viewport' content='width=device-width, initial-scale=1'>
-    <!-- <link rel='stylesheet' type='text/css' media='screen' href='main.css'> -->
-    <style>
-        body{
-            background-color: gray;
-        }
-    </style>
-</head>
-<body>
-	<script type="importmap">
-        {
-            "imports": {
-                "three": "./three/build/three.module.js"
-            }
-        }
-    </script>
-    <script type="module">
+
         import * as THREE from 'three';
-        import ThreeFiz from './three/ThreeFiz/ThreeFiz.js'
-        import Grabber from './three/ThreeFiz/Grabber.js'
+        import ThreeFiz from '../../three/ThreeFiz/ThreeFiz.js'
+        import Grabber from '../../three/ThreeFiz/Grabber.js'
         import { OrbitControls } from './three/examples/jsm/controls/OrbitControls.js';
         import * as dat from './three/examples/jsm/libs/lil-gui.module.min.js';
         import Stats from './three/examples/jsm/libs/stats.module.js';
@@ -48,9 +26,9 @@
 
         //objects
         let sphereGeo= new THREE.SphereGeometry(10);
-        let sphereGeo2= new THREE.SphereGeometry(10);
+        let boxGeo= new THREE.BoxGeometry(10, 10, 10);
         let sphereMat= new THREE.MeshPhongMaterial({color: 0x0000FF});
-        let sphereMat2= new THREE.MeshPhongMaterial({color: 0x00FF00});
+        let boxMat= new THREE.MeshPhongMaterial({color: 0x00FF00});
 
         const light= new THREE.PointLight(0xFFFFFF,1);
         const helplight= new THREE.PointLightHelper(light);
@@ -58,13 +36,13 @@
         //Scene
         const threeFizWorld = new ThreeFiz(scene)
         threeFizWorld.addSphere({mesh: new THREE.Mesh(sphereGeo,sphereMat), mass: 20, restitution: .2, isStatic: false})
-        threeFizWorld.addSphere({mesh: new THREE.Mesh(sphereGeo2,sphereMat2), mass: 10, restitution: .2, isStatic: false})
-        threeFizWorld.spheres[0].position.set(-80,5,0)
-        threeFizWorld.spheres[1].position.set(80,0,0)
+        threeFizWorld.addBox({mesh: new THREE.Mesh(boxGeo,boxMat), mass: 20, restitution: .2, isStatic: false})
+        threeFizWorld.spheres[0].position.set(-80,0,0)
+        threeFizWorld.boxes[0].position.set(80,0,0)
         threeFizWorld.GRAVITY.set(0,0,0)
         threeFizWorld.init()
         threeFizWorld.spheres[0].velocity.set(800,0,0)
-        threeFizWorld.spheres[1].velocity.set(-800,0,0)
+        threeFizWorld.boxes[0].velocity.set(-800,0,0)
 
         scene.add(
             light,
@@ -107,7 +85,3 @@
         handleResize();
         loop();
         window.addEventListener('resize',handleResize);
-
-    </script>
-</body>
-</html>

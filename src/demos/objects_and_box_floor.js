@@ -1,29 +1,7 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset='utf-8'>
-    <meta http-equiv='X-UA-Compatible' content='IE=edge'>
-    <title>Page Title</title>
-    <meta name='viewport' content='width=device-width, initial-scale=1'>
-    <!-- <link rel='stylesheet' type='text/css' media='screen' href='main.css'> -->
-    <style>
-        body{
-            background-color: gray;
-        }
-    </style>
-</head>
-<body>
-	<script type="importmap">
-        {
-            "imports": {
-                "three": "./three/build/three.module.js"
-            }
-        }
-    </script>
-    <script type="module">
+
         import * as THREE from 'three';
-        import ThreeFiz from './three/ThreeFiz/ThreeFiz.js'
-        import Grabber from './three/ThreeFiz/Grabber.js'
+        import ThreeFiz from '../../three/ThreeFiz/ThreeFiz.js'
+        import Grabber from '../../three/ThreeFiz/Grabber.js'
         import { OrbitControls } from './three/examples/jsm/controls/OrbitControls.js';
         import * as dat from './three/examples/jsm/libs/lil-gui.module.min.js';
         import Stats from './three/examples/jsm/libs/stats.module.js';
@@ -47,8 +25,7 @@
         };
 
         //objects
-        let flGeo= new THREE.BoxGeometry(350,1,350);
-        let wallGeo= new THREE.BoxGeometry(15,50,1);
+        let flGeo= new THREE.BoxGeometry(1000,1,1000);
         let flMat= new THREE.MeshPhongMaterial({color: 0xFF0000});
         let sphereGeo= new THREE.SphereGeometry(10);
         let sphereMat= new THREE.MeshPhongMaterial({color: 0x0000FF});
@@ -59,56 +36,26 @@
 
         //Scene
         const threeFizWorld = new ThreeFiz(scene)
-        let obj = 100
-        let sciany = 85
-        for(let i = 0; i< obj; i++){
-            let randomRadius = Math.random() * (15 - 5) + 5
-            threeFizWorld.addSphere({mesh: new THREE.Mesh(new THREE.SphereGeometry(randomRadius),sphereMat)})
-        }
-        for(let i = 0; i< sciany; i++){
-            threeFizWorld.addBox({mesh: new THREE.Mesh(wallGeo,flMat), isStatic: true})
+        let ilosc = 100
+        for(let i = 0; i< ilosc/2; i++){
+            threeFizWorld.addSphere({mesh: new THREE.Mesh(sphereGeo,sphereMat)})
+            threeFizWorld.addBox({mesh: new THREE.Mesh(boxGeo,boxMat)})
         }
         threeFizWorld.spheres.forEach((sphere, idx) => {
             sphere.position.set(
                 Math.random() * 50 - 10,
-                11 * idx + 100,
-                Math.random() * 50 - 10,
+                Math.random() * 50 - 10 + 100,
+                Math.random() * 50 - 10
             )
-        })
+            })
         threeFizWorld.boxes.forEach((box, idx) => {
-            if(!box.isStatic){
-                box.position.set(
-                    Math.random() * 50 - 10,
-                    11 * idx + 100,
-                    Math.random() * 50 - 10,
-                )
-            }
-        })
-        let grabber = new Grabber({
-            renderer: renderer, 
-            scene: scene, 
-            camera: camera, 
-            cameraControls: controls,
-            objectsToGrab: threeFizWorld.spheres
-        })
+            box.position.set(
+                Math.random() * 50 - 10,
+                Math.random() * 50 - 10 + 100,
+                Math.random() * 50 - 10
+            )
+            })
 
-        //scenario
-        let radius = 200
-        const tiltAngleIncrement = 90 / sciany;
-        threeFizWorld.boxes.forEach((box, idx) => {
-            if(box.isStatic){
-                const angle = (idx / sciany) * Math.PI * 2;
-                const x = 0 + Math.cos(angle) * radius;
-                const z = 0 + Math.sin(angle) * radius;
-                box.position.set(
-                    x,
-                    25,
-                    z
-                )
-                const wallDirection = new THREE.Vector3().subVectors(new THREE.Vector3(0,50,0), box.position);
-                box.rotation.y = Math.atan2(wallDirection.x, wallDirection.z);
-            }
-        })
 
         threeFizWorld.addBox({
             mesh: new THREE.Mesh(flGeo,flMat),
@@ -121,7 +68,21 @@
             light,
         );
         camera.position.set(0,150,500);
-        light.position.set(50,2050,50);
+        light.position.set(50,150,50);
+
+        //Debug
+
+        const stats = new Stats();
+        stats.domElement.style.position = 'absolute';
+        stats.domElement.style.top = '0px';
+        document.body.appendChild( stats.domElement );
+
+        const gui = new dat.GUI();
+        gui.add(threeFizWorld.boxes[0].position,"y",-50,50,.001).name('floor y');
+        gui.add(threeFizWorld.boxes[0].position,"x",-50,50,.001).name('floor x');
+        gui.add(threeFizWorld.boxes[0].rotation,'z',-Math.PI,Math.PI,.0001).name('floor rotate');
+
+        //scenario
 
         function loopObj(){
             threeFizWorld.spheres.forEach((sphere, idx) => {
@@ -147,18 +108,10 @@
             })
         }
 
-        //Debug
-
-        const stats = new Stats();
-        stats.domElement.style.position = 'absolute';
-        stats.domElement.style.top = '0px';
-        document.body.appendChild( stats.domElement );
-
         controls.update();
         const loop = () =>{
             threeFizWorld.update()
             controls.update();
-            grabber.update()
             stats.update();
             renderer.render(scene,camera);
             loopObj()
@@ -167,7 +120,3 @@
         handleResize();
         loop();
         window.addEventListener('resize',handleResize);
-
-    </script>
-</body>
-</html>

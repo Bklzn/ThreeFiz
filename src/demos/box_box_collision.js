@@ -1,29 +1,7 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset='utf-8'>
-    <meta http-equiv='X-UA-Compatible' content='IE=edge'>
-    <title>Page Title</title>
-    <meta name='viewport' content='width=device-width, initial-scale=1'>
-    <!-- <link rel='stylesheet' type='text/css' media='screen' href='main.css'> -->
-    <style>
-        body{
-            background-color: gray;
-        }
-    </style>
-</head>
-<body>
-	<script type="importmap">
-        {
-            "imports": {
-                "three": "./three/build/three.module.js"
-            }
-        }
-    </script>
-    <script type="module">
+
         import * as THREE from 'three';
-        import ThreeFiz from './three/ThreeFiz/ThreeFiz.js'
-        import Grabber from './three/ThreeFiz/Grabber.js'
+        import ThreeFiz from '../../three/ThreeFiz/ThreeFiz.js'
+        import Grabber from '../../three/ThreeFiz/Grabber.js'
         import { OrbitControls } from './three/examples/jsm/controls/OrbitControls.js';
         import * as dat from './three/examples/jsm/libs/lil-gui.module.min.js';
         import Stats from './three/examples/jsm/libs/stats.module.js';
@@ -158,7 +136,3 @@
         handleResize();
         loop();
         window.addEventListener('resize',handleResize);
-
-    </script>
-</body>
-</html>
