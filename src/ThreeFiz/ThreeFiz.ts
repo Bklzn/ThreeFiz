@@ -84,8 +84,6 @@ class ThreeFiz {
       restitution: restitution,
       isStatic: isStatic,
     };
-    console.log(typeof mesh);
-    console.log(mesh);
     sphere.collider.radius = sphere.mesh.geometry.parameters.radius;
     this.spheres.push(sphere);
   }

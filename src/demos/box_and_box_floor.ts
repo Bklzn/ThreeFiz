@@ -1,10 +1,10 @@
 import * as THREE from "three";
-import ThreeFiz from "./ThreeFiz/ThreeFiz";
+import ThreeFiz from "../ThreeFiz/ThreeFiz";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-import Grabber from "./ThreeFiz/Grabber";
+import Grabber from "../ThreeFiz/Grabber";
 import * as dat from "three/examples/jsm/libs/lil-gui.module.min.js";
 import Stats from "three/examples/jsm/libs/stats.module.js";
-//init
+
 let scene = new THREE.Scene();
 let camera = new THREE.PerspectiveCamera(
   40,
@@ -13,7 +13,7 @@ let camera = new THREE.PerspectiveCamera(
   10000
 );
 let renderer = new THREE.WebGLRenderer({
-  antiailas: true,
+  antialias: true,
   alpha: true,
 });
 let controls = new OrbitControls(camera, renderer.domElement);
@@ -47,9 +47,12 @@ const handleResize = () => {
 let flGeo = new THREE.BoxGeometry(200, 1, 100);
 let flMat = new THREE.MeshPhongMaterial({ color: 0xff0000, wireframe: true });
 let boxGeo = new THREE.BoxGeometry(20, 20, 20);
-let boxMat = new THREE.MeshPhongMaterial({ color: 0x0000ff, wireframe: false });
+let boxMat = new THREE.MeshPhongMaterial({
+  color: 0x0000ff,
+  wireframe: false,
+});
 
-const light = new THREE.PointLight(0xffffff, 1);
+const light = new THREE.PointLight(0xffffff, 30, 0, 0.5);
 const helplight = new THREE.PointLightHelper(light);
 
 //Scene
@@ -57,7 +60,7 @@ const threeFizWorld = new ThreeFiz(scene);
 threeFizWorld.addBox({
   mesh: new THREE.Mesh(flGeo, flMat),
   mass: 100,
-  restitutuion: 0.2,
+  restitution: 0.2,
   isStatic: true,
 });
 // threeFizWorld.GRAVITY.set(0,-1,0)
@@ -66,7 +69,7 @@ for (let i = 0; i < ilosc; i++) {
   threeFizWorld.addBox({
     mesh: new THREE.Mesh(boxGeo.clone(), boxMat.clone()),
     mass: 10,
-    restitutuion: 0.2,
+    restitution: 0.2,
   });
 }
 // load('./models/bowl.glb')
@@ -101,9 +104,9 @@ light.position.set(50, 150, 50);
 //Debug
 
 const stats = new Stats();
-stats.domElement.style.position = "absolute";
-stats.domElement.style.top = "0px";
-document.body.appendChild(stats.domElement);
+stats.dom.style.position = "absolute";
+stats.dom.style.top = "0px";
+document.body.appendChild(stats.dom);
 
 const gui = new dat.GUI();
 gui.add(world.position, "y", -50, 50, 0.001).name("floor y");
@@ -132,30 +135,30 @@ function loopBox() {
 controls.update();
 const loop = () => {
   document.getElementsByTagName("p")[0].innerHTML = `blue: 
-            x${threeFizWorld.boxes[0].collider.center.x.toFixed(2)} 
-            y${threeFizWorld.boxes[0].collider.center.y.toFixed(2)} 
-            z${threeFizWorld.boxes[0].collider.center.z.toFixed(2)}
-            <br>V: (
-                x${threeFizWorld.boxes[0].velocity.x.toFixed(2)} 
-                y${threeFizWorld.boxes[0].velocity.y.toFixed(2)} 
-                z${threeFizWorld.boxes[0].velocity.z.toFixed(2)}
-            )
-            <br>R: (
-                x${threeFizWorld.boxes[0].rotationVelocity.x.toFixed(2)} 
-                y${threeFizWorld.boxes[0].rotationVelocity.y.toFixed(2)} 
-                z${threeFizWorld.boxes[0].rotationVelocity.z.toFixed(2)}
-            )
-            `;
+                x${threeFizWorld.boxes[0].collider.center.x.toFixed(2)} 
+                y${threeFizWorld.boxes[0].collider.center.y.toFixed(2)} 
+                z${threeFizWorld.boxes[0].collider.center.z.toFixed(2)}
+                <br>V: (
+                    x${threeFizWorld.boxes[0].velocity.x.toFixed(2)} 
+                    y${threeFizWorld.boxes[0].velocity.y.toFixed(2)} 
+                    z${threeFizWorld.boxes[0].velocity.z.toFixed(2)}
+                )
+                <br>R: (
+                    x${threeFizWorld.boxes[0].rotationVelocity.x.toFixed(2)} 
+                    y${threeFizWorld.boxes[0].rotationVelocity.y.toFixed(2)} 
+                    z${threeFizWorld.boxes[0].rotationVelocity.z.toFixed(2)}
+                )
+                `;
   document.getElementsByTagName("p")[1].innerHTML = `red: 
-            x${threeFizWorld.boxes[1].collider.center.x.toFixed(2)} 
-            y${threeFizWorld.boxes[1].collider.center.y.toFixed(2)} 
-            z${threeFizWorld.boxes[1].collider.center.z.toFixed(2)} 
-            <br>V: (
-                x${threeFizWorld.boxes[1].velocity.x.toFixed(2)} 
-                y${threeFizWorld.boxes[1].velocity.y.toFixed(2)} 
-                z${threeFizWorld.boxes[1].velocity.z.toFixed(2)}
-            )
-            `;
+                x${threeFizWorld.boxes[1].collider.center.x.toFixed(2)} 
+                y${threeFizWorld.boxes[1].collider.center.y.toFixed(2)} 
+                z${threeFizWorld.boxes[1].collider.center.z.toFixed(2)} 
+                <br>V: (
+                    x${threeFizWorld.boxes[1].velocity.x.toFixed(2)} 
+                    y${threeFizWorld.boxes[1].velocity.y.toFixed(2)} 
+                    z${threeFizWorld.boxes[1].velocity.z.toFixed(2)}
+                )
+                `;
   grabber.update();
   threeFizWorld.update();
   controls.update();

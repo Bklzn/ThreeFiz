@@ -2,6 +2,8 @@ import * as THREE from "three";
 import ThreeFiz from "../ThreeFiz/ThreeFiz";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import Stats from "three/examples/jsm/libs/stats.module.js";
+
+//init
 let scene = new THREE.Scene();
 let camera = new THREE.PerspectiveCamera(
   40,
@@ -25,39 +27,39 @@ const handleResize = () => {
 };
 
 //objects
-let sphereGeo = new THREE.SphereGeometry(10);
 let boxGeo = new THREE.BoxGeometry(10, 10, 10);
-let sphereMat = new THREE.MeshStandardMaterial({ color: 0x0000ff });
-let boxMat = new THREE.MeshStandardMaterial({ color: 0x00ff00 });
+let boxGeo2 = new THREE.BoxGeometry(10, 10, 10);
+let boxMat = new THREE.MeshPhongMaterial({ color: 0x0000ff });
+let boxMat2 = new THREE.MeshPhongMaterial({ color: 0x00ff00 });
 
 const light = new THREE.PointLight(0xffffff, 30, 0, 0.5);
 const helplight = new THREE.PointLightHelper(light);
 
 //Scene
 const threeFizWorld = new ThreeFiz(scene);
-threeFizWorld.addSphere({
-  mesh: new THREE.Mesh(sphereGeo, sphereMat),
-  mass: 20,
-  restitution: 0.2,
-  isStatic: false,
-});
 threeFizWorld.addBox({
   mesh: new THREE.Mesh(boxGeo, boxMat),
   mass: 20,
   restitution: 0.2,
   isStatic: false,
 });
-threeFizWorld.spheres[0].position.set(-80, 0, 0);
-threeFizWorld.boxes[0].position.set(80, 0, 0);
+threeFizWorld.addBox({
+  mesh: new THREE.Mesh(boxGeo2, boxMat2),
+  mass: 10,
+  restitution: 0.2,
+  isStatic: false,
+});
+threeFizWorld.boxes[0].position.set(-80, 5, 0);
+threeFizWorld.boxes[1].position.set(80, 0, 0);
 if (threeFizWorld.GRAVITY instanceof THREE.Vector3)
   threeFizWorld.GRAVITY.set(0, 0, 0);
 threeFizWorld.init();
-threeFizWorld.spheres[0].velocity.set(800, 0, 0);
-threeFizWorld.boxes[0].velocity.set(-800, 0, 0);
+threeFizWorld.boxes[0].velocity.set(800, 0, 0);
+threeFizWorld.boxes[1].velocity.set(-800, 0, 0);
 
 scene.add(light, helplight);
 camera.position.set(0, 50, 300);
-light.position.set(50, 15, 50);
+light.position.set(50, 150, 50);
 
 //Debug
 

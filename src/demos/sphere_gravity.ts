@@ -1,7 +1,11 @@
 import * as THREE from "three";
 import ThreeFiz from "../ThreeFiz/ThreeFiz";
+import Grabber from "../ThreeFiz/Grabber";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import * as dat from "three/examples/jsm/libs/lil-gui.module.min.js";
 import Stats from "three/examples/jsm/libs/stats.module.js";
+
+//init
 let scene = new THREE.Scene();
 let camera = new THREE.PerspectiveCamera(
   40,
@@ -25,39 +29,60 @@ const handleResize = () => {
 };
 
 //objects
-let sphereGeo = new THREE.SphereGeometry(10);
-let boxGeo = new THREE.BoxGeometry(10, 10, 10);
-let sphereMat = new THREE.MeshStandardMaterial({ color: 0x0000ff });
-let boxMat = new THREE.MeshStandardMaterial({ color: 0x00ff00 });
+let sphereGeo = new THREE.SphereGeometry(30);
+let sphereGeo2 = new THREE.SphereGeometry(10);
+let sphereMat = new THREE.MeshPhongMaterial({ color: 0x0000ff });
+let sphereMat2 = new THREE.MeshPhongMaterial({ color: 0x00ff00 });
 
 const light = new THREE.PointLight(0xffffff, 30, 0, 0.5);
 const helplight = new THREE.PointLightHelper(light);
 
 //Scene
 const threeFizWorld = new ThreeFiz(scene);
+let ilosc = 5;
 threeFizWorld.addSphere({
   mesh: new THREE.Mesh(sphereGeo, sphereMat),
-  mass: 20,
+  mass: 10,
   restitution: 0.2,
-  isStatic: false,
+  isStatic: true,
 });
-threeFizWorld.addBox({
-  mesh: new THREE.Mesh(boxGeo, boxMat),
-  mass: 20,
-  restitution: 0.2,
-  isStatic: false,
+let staticObj = threeFizWorld.spheres[0];
+for (let i = 0; i < ilosc; i++) {
+  threeFizWorld.addSphere({
+    mesh: new THREE.Mesh(sphereGeo2, sphereMat2),
+    mass: 10,
+    restitution: 0.9,
+  });
+  threeFizWorld.spheres[i + 1].position.set(
+    Math.random() * 100 - 20,
+    Math.random() * 100 - 20,
+    Math.random() * 100 - 20
+  );
+}
+
+threeFizWorld.GRAVITY = {
+  radial: threeFizWorld.spheres[0].position,
+  force: 10,
+};
+let grabber = new Grabber({
+  renderer: renderer,
+  scene: scene,
+  camera: camera,
+  cameraControls: controls,
+  objectsToGrab: [
+    threeFizWorld.spheres[0],
+    threeFizWorld.spheres[1],
+    threeFizWorld.spheres[2],
+    threeFizWorld.spheres[3],
+    threeFizWorld.spheres[4],
+    threeFizWorld.spheres[5],
+  ],
 });
-threeFizWorld.spheres[0].position.set(-80, 0, 0);
-threeFizWorld.boxes[0].position.set(80, 0, 0);
-if (threeFizWorld.GRAVITY instanceof THREE.Vector3)
-  threeFizWorld.GRAVITY.set(0, 0, 0);
 threeFizWorld.init();
-threeFizWorld.spheres[0].velocity.set(800, 0, 0);
-threeFizWorld.boxes[0].velocity.set(-800, 0, 0);
 
 scene.add(light, helplight);
 camera.position.set(0, 50, 300);
-light.position.set(50, 15, 50);
+light.position.set(50, 150, 50);
 
 //Debug
 
@@ -65,6 +90,12 @@ const stats = new Stats();
 stats.dom.style.position = "absolute";
 stats.dom.style.top = "0px";
 document.body.appendChild(stats.dom);
+
+const gui = new dat.GUI();
+let gravity = { force: threeFizWorld.GRAVITY.force };
+gui.add(gravity, "force", 0, 50, 0.001).name("gravity");
+// gui.add(threeFizWorld.boxes[0].position,"x",-50,50,.001).name('floor x');
+// gui.add(threeFizWorld.boxes[0].rotation,'z',-Math.PI,Math.PI,.0001).name('floor rotate');
 
 //scenario
 
@@ -83,7 +114,12 @@ function loopBall() {
 
 controls.update();
 const loop = () => {
+  grabber.update();
   threeFizWorld.update();
+  threeFizWorld.GRAVITY = {
+    radial: staticObj.position,
+    force: gravity.force,
+  };
   controls.update();
   stats.update();
   renderer.render(scene, camera);
