@@ -1,11 +1,29 @@
 import * as THREE from "three";
+import ThreeFiz from "./ThreeFiz";
 class Grabber {
+  raycaster: THREE.Raycaster;
+  SCENE: THREE.Scene;
+  CAMERA: THREE.Camera;
+  objects: ThreeFiz["boxes"] | ThreeFiz["spheres"];
+  distance: number;
+  prevPos: THREE.Vector3;
+  vel: THREE.Vector3;
+  time: number;
+  renderer: THREE.WebGLRenderer;
+  grabbed: null | { object: any; pos: THREE.Vector3 | null };
+  cameraControls: any;
   constructor({
     renderer,
     scene,
     camera,
     cameraControls = null,
     objectsToGrab = [],
+  }: {
+    renderer: THREE.WebGLRenderer;
+    scene: THREE.Scene;
+    camera: THREE.Camera;
+    cameraControls?: any;
+    objectsToGrab?: ThreeFiz["boxes"] | ThreeFiz["spheres"];
   }) {
     this.SCENE = scene;
     this.CAMERA = camera;
@@ -24,7 +42,12 @@ class Grabber {
     window.addEventListener("mousedown", this.controls.bind(this));
     window.addEventListener("mouseup", this.controls.bind(this));
   }
-  controls(event) {
+  controls(event: {
+    preventDefault: () => void;
+    type: string;
+    clientX: any;
+    clientY: any;
+  }) {
     event.preventDefault();
     if (event.type == "mousedown") {
       this.start(event.clientX, event.clientY);
@@ -48,18 +71,18 @@ class Grabber {
       this.grabbed.object.velocity.set(0, 0, 0);
     }
   }
-  updateRaycaster(x, y) {
+  updateRaycaster(x: number, y: number) {
     let rect = this.renderer.domElement.getBoundingClientRect();
-    this.mousePos = new THREE.Vector2();
-    this.mousePos.x = ((x - rect.left) / rect.width) * 2 - 1;
-    this.mousePos.y = -((y - rect.top) / rect.height) * 2 + 1;
-    this.raycaster.setFromCamera(this.mousePos, this.CAMERA);
+    let mousePos = new THREE.Vector2();
+    mousePos.x = ((x - rect.left) / rect.width) * 2 - 1;
+    mousePos.y = -((y - rect.top) / rect.height) * 2 + 1;
+    this.raycaster.setFromCamera(mousePos, this.CAMERA);
   }
-  start(x, y) {
+  start(x: number, y: number) {
     this.updateRaycaster(x, y);
     let intersects = this.raycaster.intersectObjects(this.SCENE.children);
     if (intersects.length > 0) {
-      this.objects.forEach((el, idx) => {
+      this.objects.forEach((el, _idx) => {
         if (el.mesh === intersects[0].object) {
           this.grabbed = {
             object: el,
@@ -80,7 +103,7 @@ class Grabber {
       }
     }
   }
-  move(x, y) {
+  move(x: number, y: number) {
     if (this.grabbed) {
       this.updateRaycaster(x, y);
       var pos = this.raycaster.ray.origin.clone();

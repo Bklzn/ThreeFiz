@@ -156,7 +156,7 @@ const loop = () => {
                 z${threeFizWorld.boxes[1].velocity.z.toFixed(2)}
             )
             `;
-  grabber.update(13);
+  grabber.update();
   threeFizWorld.update();
   controls.update();
   stats.update();

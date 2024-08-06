@@ -1,10 +1,40 @@
 import * as THREE from "three";
-import { Octree } from "../examples/jsm/math/Octree.js";
 import { OBBs } from "./OBB.js";
-import { Ray, Vector3 } from "three";
+import { Vector3 } from "three";
+import { Octree } from "three/addons/math/Octree.js";
 
 class ThreeFiz {
-  constructor(scene, TIME_STEP = 0.1) {
+  dT: number;
+  lastUpdate: number;
+  accumulator: number;
+  TIME_STEP: number;
+  spheres: {
+    mesh: THREE.Mesh;
+    collider: THREE.Sphere;
+    velocity: THREE.Vector3;
+    position: THREE.Vector3;
+    force: THREE.Vector3;
+    mass?: number;
+    restitution?: number;
+    isStatic?: boolean;
+  }[];
+  boxes: {
+    collider: OBBs;
+    mesh: THREE.Mesh;
+    velocity: THREE.Vector3;
+    position: THREE.Vector3;
+    rotation: THREE.Vector3;
+    rotationVelocity: THREE.Vector3;
+    force: THREE.Vector3;
+    mass?: number;
+    InertiaTensor: THREE.Matrix3;
+    restitution: number;
+    isStatic: boolean;
+  }[];
+  SCENE: THREE.Scene;
+  GRAVITY: THREE.Vector3 | { force: number; radial: THREE.Vector3 };
+  world?: { mesh: THREE.Mesh; collider: Octree };
+  constructor(scene: THREE.Scene, TIME_STEP = 0.1) {
     this.dT = 0.0;
     this.lastUpdate = Date.now();
     this.accumulator = 0.0;
@@ -32,30 +62,18 @@ class ThreeFiz {
       else if (a.isStatic === true) return 1;
       else return -1;
     });
-    this.arrow = new THREE.ArrowHelper(
-      new Vector3(1, 1, 1),
-      new Vector3(),
-      20,
-      0xffff00
-    );
-    this.red = new THREE.PointLight(0xff0000, 1);
-    this.blue = new THREE.PointLight(0x0000ff, 1);
-    this.yellow = new THREE.PointLight(0xffff00, 1);
-    this.helplight = new THREE.PointLightHelper(this.red);
-    this.helplight2 = new THREE.PointLightHelper(this.blue);
-    this.helplight3 = new THREE.PointLightHelper(this.yellow);
-    this.iterate = 0;
-    this.SCENE.add(
-      this.red,
-      this.blue,
-      this.yellow,
-      this.helplight,
-      this.helplight2,
-      this.helplight3,
-      this.arrow
-    );
   }
-  addSphere({ mesh, mass = 1, restitution = 0.2, isStatic = false }) {
+  addSphere({
+    mesh,
+    mass = 1,
+    restitution = 0.2,
+    isStatic = false,
+  }: {
+    mesh: THREE.Mesh<THREE.SphereGeometry, any>;
+    mass?: number;
+    restitution?: number;
+    isStatic?: boolean;
+  }) {
     let sphere = {
       mesh: mesh,
       collider: new THREE.Sphere(new THREE.Vector3(0, 0, 0), 0),
@@ -66,10 +84,22 @@ class ThreeFiz {
       restitution: restitution,
       isStatic: isStatic,
     };
+    console.log(typeof mesh);
+    console.log(mesh);
     sphere.collider.radius = sphere.mesh.geometry.parameters.radius;
     this.spheres.push(sphere);
   }
-  addBox({ mesh, mass = 1, restitution = 0.2, isStatic = false }) {
+  addBox({
+    mesh,
+    mass = 1,
+    restitution = 0.2,
+    isStatic = false,
+  }: {
+    mesh: THREE.Mesh<THREE.BoxGeometry, any>;
+    mass?: number;
+    restitution?: number;
+    isStatic?: boolean;
+  }) {
     let boxparams = mesh.geometry.parameters;
     let InertiaTensor = new THREE.Matrix3().set(
       (mass / 12) * (boxparams.height ** 2 + boxparams.depth ** 2),
@@ -108,28 +138,38 @@ class ThreeFiz {
     box.mesh.matrixAutoUpdate = false;
     this.boxes.push(box);
   }
-  // setWorld(mesh){
-  //     let world = {
-  //         mesh: mesh,
-  //         collider: new Octree(),
-  //     }
-  //     world.collider.fromGraphNode(world.mesh)
-  //     this.world = world
-  // }
-  gravity(obj) {
+  setWorld(mesh: any) {
+    let world = {
+      mesh: mesh,
+      collider: new Octree(),
+    };
+    world.collider.fromGraphNode(world.mesh);
+    this.world = world;
+  }
+  gravity(obj: {
+    mesh?: THREE.Mesh<
+      THREE.BufferGeometry<THREE.NormalBufferAttributes>,
+      THREE.Material | THREE.Material[],
+      THREE.Object3DEventMap
+    >;
+    mass?: number | undefined;
+    restitution?: number | undefined;
+    isStatic?: boolean | undefined;
+    position?: any;
+  }) {
     let g = this.GRAVITY;
-    if (g.radial && g.force) {
-      if (g.radial.isVector3)
-        return new Vector3()
+    if ("radial" in g && "force" in g) {
+      if (g.radial instanceof THREE.Vector3)
+        return new THREE.Vector3()
           .copy(g.radial)
           .sub(obj.position)
           .normalize()
           .multiplyScalar(g.force);
     }
-    if (g.isVector3) return g.clone();
-    return new Vector3(0, 0, 0);
+    if (g instanceof THREE.Vector3) return g.clone();
+    return new THREE.Vector3(0, 0, 0);
   }
-  updateObjects(time) {
+  updateObjects(time: number) {
     this.spheres.forEach((sphere) => {
       if (!sphere.isStatic) {
         sphere.velocity.add(this.gravity(sphere));
@@ -140,7 +180,7 @@ class ThreeFiz {
     });
     this.boxes.forEach((box) => {
       if (!box.isStatic) {
-        box.velocity.add(this.GRAVITY.clone());
+        box.velocity.add(this.gravity(box));
         box.position.addScaledVector(box.velocity, time);
         box.rotation.addScaledVector(box.rotationVelocity, time);
       }
@@ -151,20 +191,34 @@ class ThreeFiz {
       box.collider.copy(box.mesh.userData.obb);
       box.collider.applyMatrix4(box.mesh.matrixWorld);
     });
-    this.sphereBoxCollisions(time / 10000);
+    this.sphereBoxCollisions();
     this.spheresCollisions();
     this.boxesCollisions(time / 10000);
     // if (this.world) this.worldCollisions(time) // może do update lepiej
   }
-  checkCollisions(obj) {
+  checkCollisions(obj: {
+    mesh: any;
+    collider: any;
+    velocity?: THREE.Vector3;
+    position?: THREE.Vector3;
+    force?: THREE.Vector3;
+    mass?: number | undefined;
+    restitution?: number | undefined;
+    isStatic?: boolean | undefined;
+  }) {
     obj.mesh.position.copy(obj.collider.center);
-    this.world.collider.subTrees = [];
-    this.world.collider.fromGraphNode(this.world.mesh);
-    return this.world.collider.sphereIntersect(obj.collider);
+    if (this.world && this.world.collider) {
+      this.world.collider.subTrees = [];
+      if (this.world.mesh) {
+        this.world.collider.fromGraphNode(this.world.mesh);
+      }
+      return this.world.collider.sphereIntersect(obj.collider);
+    }
+    return null;
   }
-  worldCollisions(time) {
+  worldCollisions(time: number) {
     this.boxes.forEach((box) => {
-      if (box.static) {
+      if (box.isStatic) {
       }
     });
     this.spheres.forEach((sphere) => {
@@ -172,7 +226,7 @@ class ThreeFiz {
       if (collision) {
         let relativeVelocity = sphere.velocity.clone(); //.sub(floor.velocity)
         let dot = relativeVelocity.dot(collision.normal);
-        sphere.hit = true;
+        // sphere.hit = true;
         sphere.collider.center.add(
           collision.normal.clone().multiplyScalar(collision.depth)
         );
@@ -202,10 +256,11 @@ class ThreeFiz {
               .length();
             const radii = sphere1.collider.radius + sphere2.collider.radius;
             const d = (radii - depth) / 2;
-            const M = sphere1.mass + sphere2.mass;
-            const F1 = (2 * sphere1.mass) / M;
-            const F2 = (2 * sphere2.mass) / M;
-            const restitution = (sphere1.restitution + sphere2.restitution) / 2;
+            const M = (sphere1.mass ?? 1) + (sphere2.mass ?? 1);
+            const F1 = (2 * (sphere1.mass ?? 1)) / M;
+            const F2 = (2 * (sphere2.mass ?? 1)) / M;
+            const restitution =
+              ((sphere1.restitution ?? 1) + (sphere2.restitution ?? 1)) / 2;
             if (!sphere1.isStatic) {
               sphere1.position.addScaledVector(normal.clone(), d);
               sphere1.velocity.addScaledVector(normal, -dot * restitution * F1);
@@ -237,7 +292,7 @@ class ThreeFiz {
             point: closestPoint,
           };
           let r = collision.point.clone().sub(box.position.clone());
-          let relBox = new Vector3(),
+          let relBox = new THREE.Vector3(),
             relSphere = new Vector3(),
             jBox = new Vector3(),
             boxM = 0,
@@ -253,20 +308,22 @@ class ThreeFiz {
                 .applyMatrix3(box.InertiaTensor.clone().invert())
                 .cross(r)
             );
-            boxM = 1 / box.mass;
+            boxM = 1 / (box.mass ?? 1);
           }
           if (!sphere.isStatic) {
             relSphere.copy(sphere.velocity.clone());
-            sphereM = 1 / sphere.mass;
+            sphereM = 1 / (sphere.mass ?? 1);
             relSphere = sphere.velocity.clone();
           }
           let relV = relSphere.sub(relBox);
           const dot = relV.dot(collision.normal);
-          const restitution = (box.restitution + sphere.restitution) / 2;
+          const restitution = (box.restitution + (sphere.restitution ?? 1)) / 2;
           const jN = -(1 + restitution) * dot;
           const jD = boxM + sphereM + jBox.dot(collision.normal);
           const j = jN / jD;
-          const boxvel = collision.normal.clone().multiplyScalar(j / box.mass);
+          const boxvel = collision.normal
+            .clone()
+            .multiplyScalar(j / (box.mass ?? 1));
           const boxrot = r
             .clone()
             .cross(collision.normal.clone().multiplyScalar(j))
@@ -293,7 +350,11 @@ class ThreeFiz {
     });
   }
 
-  clampRotation(rotation, min, max) {
+  clampRotation(
+    rotation: THREE.Vector3,
+    min: THREE.Vector3,
+    max: THREE.Vector3
+  ) {
     const x = rotation.x * (Math.PI / 180);
     const y = rotation.y * (Math.PI / 180);
     const z = rotation.z * (Math.PI / 180);
@@ -309,130 +370,105 @@ class ThreeFiz {
     );
   }
 
-  boxesCollisions(dT) {
+  boxesCollisions(dT: number) {
     this.boxes.forEach((box1, idx1) => {
       this.boxes.forEach((box2, idx2) => {
         if (box1 !== box2 && idx2 > idx1) {
           if (box1.collider.intersectsOBB(box2.collider)) {
             const damping = Math.exp(-1 * dT);
-            // if(Math.random() > .3){
-            //     box1.rotationVelocity.multiplyScalar(.99 + (box1.restitution + box2.restitution)/1000)
-            //     box2.rotationVelocity.multiplyScalar(.99 + (box1.restitution + box2.restitution)/1000)
-            // }
-            // const min = new Vector3(-180, -180, -90);
-            // const max = new Vector3(.180, 180, 90);
-
-            // this.clampRotation(box1.rotationVelocity, min, max);
-            // this.clampRotation(box2.rotationVelocity, min, max);
             const collisionPoint = box1.collider.collisionPoint(box2.collider);
-            let friction = 0.5;
-            let m1 = new THREE.Matrix4()
-              .setFromMatrix3(box1.collider.rotation)
-              .invert();
-            let m2 = new THREE.Matrix4()
-              .setFromMatrix3(box2.collider.rotation)
-              .invert();
-            let r1 = collisionPoint.point.clone().sub(box1.position.clone()); //.applyMatrix4(m1)
-            let r2 = collisionPoint.point.clone().sub(box2.position.clone()); //.applyMatrix4(m2)
-            let relBox1 = new Vector3(),
-              relBox2 = new Vector3(),
-              jBox1 = new Vector3(),
-              jBox2 = new Vector3(),
-              box1M = 0,
-              box2M = 0;
-            if (!box1.isStatic) {
-              relBox1.copy(
-                box1.velocity
-                  .clone()
-                  .add(box1.rotationVelocity.clone().cross(r1))
-              );
-              jBox1.copy(
-                r1
-                  .clone()
-                  .cross(collisionPoint.normal)
-                  .applyMatrix3(box1.InertiaTensor.clone().invert())
-                  .cross(r1)
-              );
-              box1M = 1 / box1.mass;
-            }
-            if (!box2.isStatic) {
-              relBox2.copy(
-                box2.velocity
-                  .clone()
-                  .add(box2.rotationVelocity.clone().cross(r2))
-              );
-              jBox2.copy(
-                r2
-                  .clone()
-                  .cross(collisionPoint.normal)
-                  .applyMatrix3(box2.InertiaTensor.clone().invert())
-                  .cross(r2)
-              );
-              box2M = 1 / box2.mass;
-            }
-            let relV = relBox1.sub(relBox2).dot(collisionPoint.normal);
-            const jN = -(1 + (box1.restitution + box2.restitution) / 2) * relV;
-            const jD =
-              box1M + box2M + jBox1.add(jBox2).dot(collisionPoint.normal);
-            const j = jN / jD;
-            const box1vel = collisionPoint.normal
-              .clone()
-              .multiplyScalar(j / box1.mass);
-            const box2vel = collisionPoint.normal
-              .clone()
-              .multiplyScalar(j / box2.mass);
-            const box1rot = r1
-              .clone()
-              .cross(collisionPoint.normal.clone().multiplyScalar(j))
-              .applyMatrix3(box1.InertiaTensor.clone().invert());
-            const box2rot = r2
-              .clone()
-              .cross(collisionPoint.normal.clone().multiplyScalar(j))
-              .applyMatrix3(box2.InertiaTensor.clone().invert());
+            if (collisionPoint && collisionPoint.point) {
+              let friction = 0.5;
+              let m1 = new THREE.Matrix4()
+                .setFromMatrix3(box1.collider.rotation)
+                .invert();
+              let m2 = new THREE.Matrix4()
+                .setFromMatrix3(box2.collider.rotation)
+                .invert();
+              let r1 = collisionPoint.point.clone().sub(box1.position);
+              let r2 = collisionPoint.point.clone().sub(box2.position);
+              let relBox1 = new THREE.Vector3(),
+                relBox2 = new THREE.Vector3(),
+                jBox1 = new THREE.Vector3(),
+                jBox2 = new THREE.Vector3(),
+                box1M = 0,
+                box2M = 0;
+              if (!box1.isStatic) {
+                relBox1.copy(
+                  box1.velocity
+                    .clone()
+                    .add(box1.rotationVelocity.clone().cross(r1))
+                );
+                jBox1.copy(
+                  r1
+                    .clone()
+                    .cross(collisionPoint.normal)
+                    .applyMatrix3(box1.InertiaTensor.clone().invert())
+                    .cross(r1)
+                );
+                box1M = 1 / (box1.mass ?? 1);
+              }
+              if (!box2.isStatic) {
+                relBox2.copy(
+                  box2.velocity
+                    .clone()
+                    .add(box2.rotationVelocity.clone().cross(r2))
+                );
+                jBox2.copy(
+                  r2
+                    .clone()
+                    .cross(collisionPoint.normal)
+                    .applyMatrix3(box2.InertiaTensor.clone().invert())
+                    .cross(r2)
+                );
+                box2M = 1 / (box2.mass ?? 1);
+              }
+              let relV = relBox1.sub(relBox2).dot(collisionPoint.normal);
+              const jN =
+                -(1 + (box1.restitution + box2.restitution) / 2) * relV;
+              const jD =
+                box1M + box2M + jBox1.add(jBox2).dot(collisionPoint.normal);
+              const j = jN / jD;
+              const box1vel = collisionPoint.normal
+                .clone()
+                .multiplyScalar(j / (box1.mass ?? 1));
+              const box2vel = collisionPoint.normal
+                .clone()
+                .multiplyScalar(j / (box2.mass ?? 1));
+              const box1rot = r1
+                .clone()
+                .cross(collisionPoint.normal.clone().multiplyScalar(j))
+                .applyMatrix3(box1.InertiaTensor.clone().invert());
+              const box2rot = r2
+                .clone()
+                .cross(collisionPoint.normal.clone().multiplyScalar(j))
+                .applyMatrix3(box2.InertiaTensor.clone().invert());
 
-            if (!box1.isStatic) {
-              box1.position.add(
-                collisionPoint.normal
-                  .clone()
-                  .multiplyScalar(collisionPoint.depth)
-              );
-              box1.rotationVelocity.addScaledVector(box1rot, damping);
-              box1.velocity.addScaledVector(box1vel, damping);
+              if (!box1.isStatic) {
+                box1.position.add(
+                  collisionPoint.normal
+                    .clone()
+                    .multiplyScalar(collisionPoint.depth)
+                );
+                box1.rotationVelocity.addScaledVector(box1rot, damping);
+                box1.velocity.addScaledVector(box1vel, damping);
+              }
+              if (!box2.isStatic) {
+                box2.position.add(
+                  collisionPoint.normal
+                    .clone()
+                    .multiplyScalar(-collisionPoint.depth)
+                );
+                box2.rotationVelocity.addScaledVector(box2rot, -damping);
+                box2.velocity.addScaledVector(box2vel, -damping);
+              }
             }
-            if (!box2.isStatic) {
-              box2.position.add(
-                collisionPoint.normal
-                  .clone()
-                  .multiplyScalar(-collisionPoint.depth)
-              );
-              box2.rotationVelocity.addScaledVector(box2rot, -damping);
-              box2.velocity.addScaledVector(box2vel, -damping);
-            }
-            // this.arrow.position.copy(collisionPoint.point)
-            // this.arrow.setDirection(collisionPoint.normal)
-            // this.red.position.copy(collisionPoint.point)
-
-            // let t1 = r1.clone().normalize()
-            // let t1 = box1.velocity.clone().sub(this.GRAVITY).addScaledVector(box2rot, box1.restitution).normalize().negate()
-            // const jT = (box1.velocity.clone().negate().dot(t1) * friction)/(1/box1.mass + (r1.clone().cross(t1).cross(r1).applyMatrix3(box1.InertiaTensor.clone().invert())).dot(t1))
-            // box1vel.addScaledVector(t1.clone().normalize(), 1)
           }
         }
       });
     });
   }
   boxHelper() {}
-  octreeHelper({ node = this.world.collider, depth = 5, color = 0xff0000 }) {
-    let octree = node;
-    if (depth == 0) {
-      let boxHelper = new THREE.Box3Helper(octree.box, color);
-      this.SCENE.add(boxHelper);
-      return;
-    }
-    octree.subTrees.forEach((octreeNode) => {
-      this.octreeHelper({ node: octreeNode, depth: depth - 1, color: color });
-    });
-  }
   update() {
     this.dT = Date.now() - this.lastUpdate;
     this.lastUpdate += this.dT;

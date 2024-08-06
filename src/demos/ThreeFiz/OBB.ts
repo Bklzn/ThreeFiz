@@ -1,7 +1,7 @@
 import { Vector3, Matrix4, Ray, Plane } from "three";
 import { OBB } from "three/examples/jsm/math/OBB.js";
 class OBBs extends OBB {
-  collisionPoint(obb) {
+  collisionPoint(obb: OBBs) {
     const vertices1 = this.getVertices();
     const vertices2 = obb.getVertices();
     let containsPoints1 = [];
@@ -13,7 +13,14 @@ class OBBs extends OBB {
     }
     let l1 = containsPoints1.length;
     let l2 = containsPoints2.length;
-    let v1, v2, distance, point, depth, normal, toTest, edgePoints;
+    let v1: Vector3 | undefined,
+      v2: Vector3 | undefined,
+      distance: number,
+      point: Vector3 = new Vector3(),
+      depth: number = 0,
+      normal: Vector3 = new Vector3(),
+      toTest,
+      edgePoints;
     switch (true) {
       default:
         let collidingPoints = [];
@@ -51,14 +58,16 @@ class OBBs extends OBB {
                 }
               }
             }
-            diff = v2.clone().sub(v1).divideScalar(2);
-            point = v1.clone().add(diff);
-            normal = this.calcNormalByVertices(
-              edgePoints1[0].r,
-              edgePoints2[0].r,
-              point
-            );
-            depth = this.calcDepth(point, normal, obb);
+            if (v1 && v2) {
+              diff = v2.clone().sub(v1).divideScalar(2);
+              point = v1.clone().add(diff);
+              normal = this.calcNormalByVertices(
+                edgePoints1[0].r,
+                edgePoints2[0].r,
+                point
+              );
+              depth = this.calcDepth(point, normal, obb);
+            }
             break;
           default:
             let ray1 = new Ray(
@@ -125,10 +134,12 @@ class OBBs extends OBB {
             }
           }
         }
-        diff = v2.clone().sub(v1).divideScalar(2);
-        point = v1.clone().add(diff);
-        normal = this.calcNormalByPoint(obb, point);
-        depth = this.calcDepth(point, normal, obb);
+        if (v1 && v2) {
+          diff = v2.clone().sub(v1).divideScalar(2);
+          point = v1.clone().add(diff);
+          normal = this.calcNormalByPoint(obb, point);
+          depth = this.calcDepth(point, normal, obb);
+        }
         break;
 
       case l1 == 0 && l2 == 1:
@@ -167,10 +178,12 @@ class OBBs extends OBB {
             }
           }
         }
-        diff = v2.clone().sub(v1).divideScalar(2);
-        point = v1.clone().add(diff);
-        normal = this.calcNormalByPoint(this, point);
-        depth = this.calcDepth(point, normal, obb);
+        if (v1 && v2) {
+          diff = v2.clone().sub(v1).divideScalar(2);
+          point = v1.clone().add(diff);
+          normal = this.calcNormalByPoint(this, point);
+          depth = this.calcDepth(point, normal, obb);
+        }
         break;
     }
     return { point, depth, normal, toTest };
@@ -242,13 +255,13 @@ class OBBs extends OBB {
     return axes;
   }
 
-  calcNormalByPoint(obb, collisionPoint) {
+  calcNormalByPoint(obb: OBBs, collisionPoint: Vector3) {
     // liczy normalną z punktu umiesczonego na ścianie
     let facesToSearch = obb.getFaces();
     let helppoint = new Vector3().copy(collisionPoint);
     let normal = new Vector3();
     let minDist = Infinity;
-    let closestFace;
+    let closestFace: Vector3[] | undefined;
     let finalPlane = new Plane();
     for (let i = 0; i < facesToSearch.length; i++) {
       let plane = new Plane();
@@ -263,21 +276,24 @@ class OBBs extends OBB {
         closestFace = facesToSearch[i];
       }
     }
-    finalPlane.setFromCoplanarPoints(
-      closestFace[0],
-      closestFace[1],
-      closestFace[2]
-    );
-    normal.copy(finalPlane.normal);
-    helppoint.addScaledVector(normal, 2);
-    if (
-      helppoint.distanceTo(this.center) > collisionPoint.distanceTo(this.center)
-    ) {
-      normal.negate();
+    if (closestFace) {
+      finalPlane.setFromCoplanarPoints(
+        closestFace[0],
+        closestFace[1],
+        closestFace[2]
+      );
+      normal.copy(finalPlane.normal);
+      helppoint.addScaledVector(normal, 2);
+      if (
+        helppoint.distanceTo(this.center) >
+        collisionPoint.distanceTo(this.center)
+      ) {
+        normal.negate();
+      }
     }
     return normal;
   }
-  calcNormalByVertices(r1, r2, collisionPoint) {
+  calcNormalByVertices(r1: Vector3[], r2: Vector3[], collisionPoint: Vector3) {
     // liczy normalną z punktu umiesczonego na krawędzi
     let plane = new Plane();
     let helppoint = new Vector3().copy(collisionPoint);
@@ -292,7 +308,7 @@ class OBBs extends OBB {
     }
     return normal;
   }
-  calcDepth(point, normal, obb) {
+  calcDepth(point: Vector3, normal: Vector3, obb: OBBs) {
     let helppoint1 = new Vector3()
       .copy(point)
       .addScaledVector(normal.clone().negate(), point.distanceTo(this.center));
@@ -309,7 +325,7 @@ class OBBs extends OBB {
 
     return obbpoint1.distanceTo(obbpoint2);
   }
-  pointOnEdges(obb) {
+  pointOnEdges(obb: OBBs) {
     let vertices = this.getVertices();
     let points = [];
     let pointFinder = new Ray();
