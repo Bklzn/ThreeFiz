@@ -17,5 +17,8 @@
     "three": "^0.167.1",
     "typescript": "^5.2.2",
     "vite": "^5.3.4"
+  },
+  "dependencies": {
+    "three-mesh-bvh": "^0.7.6"
   }
 }

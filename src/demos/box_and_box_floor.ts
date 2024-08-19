@@ -1,7 +1,6 @@
 import * as THREE from "three";
 import ThreeFiz from "../ThreeFiz/ThreeFiz";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-import Grabber from "../ThreeFiz/Grabber";
 import * as dat from "three/examples/jsm/libs/lil-gui.module.min.js";
 import Stats from "three/examples/jsm/libs/stats.module.js";
 
@@ -44,12 +43,12 @@ const handleResize = () => {
 //     });
 // }
 //objects
-let flGeo = new THREE.BoxGeometry(200, 1, 100);
+let flGeo = new THREE.BoxGeometry(200, 5, 100);
 let flMat = new THREE.MeshPhongMaterial({ color: 0xff0000, wireframe: true });
 let boxGeo = new THREE.BoxGeometry(20, 20, 20);
 let boxMat = new THREE.MeshPhongMaterial({
   color: 0x0000ff,
-  wireframe: false,
+  wireframe: true,
 });
 
 const light = new THREE.PointLight(0xffffff, 30, 0, 0.5);
@@ -72,33 +71,21 @@ for (let i = 0; i < ilosc; i++) {
     restitution: 0.2,
   });
 }
-// load('./models/bowl.glb')
-// load('./models/collision-world.glb')
-// threeFizWorld.setWorld(threeFizWorld.boxes[1])
 let world = threeFizWorld.boxes[0];
-let grabber = new Grabber({
-  renderer: renderer,
-  scene: scene,
-  camera: camera,
-  cameraControls: controls,
-  objectsToGrab: [
-    threeFizWorld.boxes[1],
-    // threeFizWorld.boxes[2],
-  ],
-});
 threeFizWorld.init();
 
 // world.rotation.z = .1
-threeFizWorld.boxes.forEach((box, idx) => {
-  box.position.set(Math.random() * 50 - 10, 150, Math.random() * 50 - 10);
-});
+// threeFizWorld.boxes.forEach((box, idx) => {
+//   box.position.set(Math.random() * 50 - 10, 150, Math.random() * 50 - 10);
+// });
+threeFizWorld.boxes[0].position.set(0, 20, 0);
 world.position.set(0, 0, 0);
 scene.add(
   // new THREE.BoxHelper(threeFizWorld.boxes[0].collider, 0xffff00),
   light,
   helplight
 );
-camera.position.set(0, 50, 300);
+camera.position.set(50, 50, 100);
 light.position.set(50, 150, 50);
 
 //Debug
@@ -118,8 +105,9 @@ document.body.appendChild(document.createElement("p"));
 
 //scenario
 threeFizWorld.boxes[0].rotation.z = 0.5;
-threeFizWorld.boxes[0].rotation.y = 0.5;
-// threeFizWorld.boxes[1].rotation.x = .1
+// threeFizWorld.boxes[0].rotation.y = 0.5;
+threeFizWorld.boxes[0].rotation.x = 0.5;
+// threeFizWorld.boxes[1].rotation.x = 0.1;
 // threeFizWorld.boxes[0].rotation.y = -.9
 
 function loopBox() {
@@ -159,7 +147,6 @@ const loop = () => {
                     z${threeFizWorld.boxes[1].velocity.z.toFixed(2)}
                 )
                 `;
-  grabber.update();
   threeFizWorld.update();
   controls.update();
   stats.update();
@@ -169,7 +156,4 @@ const loop = () => {
 };
 handleResize();
 loop();
-window.addEventListener("mousemove", grabber.controls.bind(grabber));
-window.addEventListener("mousedown", grabber.controls.bind(grabber));
-window.addEventListener("mouseup", grabber.controls.bind(grabber));
 window.addEventListener("resize", handleResize);

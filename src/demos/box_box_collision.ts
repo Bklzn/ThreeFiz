@@ -48,7 +48,7 @@ threeFizWorld.addBox({
 threeFizWorld.init();
 
 scene.add(light, helplight);
-camera.position.set(0, 20, 100);
+camera.position.set(25, 20, 75);
 light.position.set(50, 150, 50);
 
 //Debug
@@ -85,18 +85,15 @@ document.body.appendChild(document.createElement("p"));
 
 //scenario
 
-threeFizWorld.boxes[0].rotation.z = -0.4;
-// threeFizWorld.boxes[0].rotation.y = .3
-// threeFizWorld.boxes[0].rotation.x = Math.PI/4 -.1
-// threeFizWorld.boxes[1].rotation.z = Math.PI/4 + .400
-// threeFizWorld.boxes[1].rotation.y = Math.PI/4 - .450
+threeFizWorld.boxes[0].rotation.z = 0.2;
+// threeFizWorld.boxes[0].rotation.y = 0.5;
 
-threeFizWorld.boxes[0].position.set(0, 45, 10);
+threeFizWorld.boxes[0].position.set(-15, 21, 0);
 threeFizWorld.boxes[1].position.set(0, 0, 0);
 
 threeFizWorld.boxes[0].velocity.set(0, 0, 0);
 threeFizWorld.boxes[0].rotationVelocity.set(0, 0, 0);
-// threeFizWorld.boxes[0].velocity.set(100,0,0)
+threeFizWorld.boxes[0].velocity.set(0, -100, 0);
 if (threeFizWorld.GRAVITY instanceof THREE.Vector3)
   threeFizWorld.GRAVITY.set(0, 0, 0);
 function loopSimulation() {
@@ -117,7 +114,6 @@ function loopSimulation() {
     threeFizWorld.boxes[0].rotationVelocity.set(0, 0, 0);
     threeFizWorld.boxes[1].velocity.set(0, 0, 0);
     threeFizWorld.boxes[1].rotationVelocity.set(0, 0, 0);
-    console.log("/////////////////////////////////////////////////");
   }
 }
 
