@@ -28,7 +28,7 @@ const handleResize = () => {
 };
 
 //objects
-let boxGeo = new THREE.BoxGeometry(10, 10, 10);
+let boxGeo = new THREE.BoxGeometry(20, 20, 20);
 let boxGeo2 = new THREE.BoxGeometry(20, 20, 20);
 let boxMat = new THREE.MeshPhongMaterial({ color: 0xff0000, wireframe: true });
 let boxMat2 = new THREE.MeshPhongMaterial({ color: 0x0000ff, wireframe: true });
@@ -85,10 +85,11 @@ document.body.appendChild(document.createElement("p"));
 
 //scenario
 
-threeFizWorld.boxes[0].rotation.z = 0.2;
-// threeFizWorld.boxes[0].rotation.y = 0.5;
+threeFizWorld.boxes[0].rotation.z = 0;
+threeFizWorld.boxes[0].rotation.y = 0.5;
+threeFizWorld.boxes[0].rotation.x = 0;
 
-threeFizWorld.boxes[0].position.set(-15, 21, 0);
+threeFizWorld.boxes[0].position.set(0, 30, 0);
 threeFizWorld.boxes[1].position.set(0, 0, 0);
 
 threeFizWorld.boxes[0].velocity.set(0, 0, 0);

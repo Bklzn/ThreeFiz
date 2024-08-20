@@ -388,22 +388,6 @@ class ThreeFiz {
               box2.collider,
               this.SCENE
             );
-            console.log(collisionPoint);
-            box1.collider.getPointHelper(this.SCENE, collisionPoint.point!);
-            box1.collider.getArrowHelper(
-              this.SCENE,
-              collisionPoint.normal!,
-              collisionPoint.point!
-            );
-            box1.collider.getPointHelper(
-              this.SCENE,
-              collisionPoint
-                .point!.clone()
-                .addScaledVector(
-                  collisionPoint.normal!.clone().negate(),
-                  collisionPoint.depth!
-                )
-            );
             // if (collisionPoint && collisionPoint.point) {
             //   let friction = 0.5;
             //   let m1 = new THREE.Matrix4()

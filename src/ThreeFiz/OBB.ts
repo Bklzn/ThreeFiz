@@ -12,128 +12,202 @@ import {
 import { OBB } from "three/addons/math/OBB.js";
 import { randInt } from "three/src/math/MathUtils.js";
 class OBBs extends OBB {
-  collisonVertices: Vector3[];
-  collision: {
-    point: Vector3 | undefined;
-    depth: number | undefined;
-    normal: Vector3 | undefined;
-  };
   scene: Scene;
   constructor() {
     super();
-    this.collisonVertices = [];
-    this.collision = {
-      point: undefined,
-      depth: undefined,
-      normal: undefined,
-    };
     this.scene = new Scene();
   }
   getCollisionPoint(obb: OBBs, scene: Scene) {
     this.scene = scene;
-    this.collisonVertices = [] as Vector3[];
-    obb.getVertices().map((vertex) => {
-      if (this.containsPoint(vertex)) {
-        obb.collisonVertices.push(vertex);
-      }
-    });
+    obb.scene = scene;
+    const collisionVertices1: Vector3[] = [];
+    const collisionVertices2: Vector3[] = [];
     this.getVertices().map((vertex) => {
       if (obb.containsPoint(vertex)) {
-        this.collisonVertices.push(vertex);
+        collisionVertices1.push(vertex);
       }
     });
-    switch (this.collisonVertices.length) {
-      case 1:
-        this.collision.point = this.collisonVertices[0];
-        this.computeCollisionNormal(obb);
-        this.computeCollisionDepth(obb);
-        break;
-      case 2:
-        // point between the two points in half distance
-        this.collision.point = new Vector3()
-          .addVectors(this.collisonVertices[0], this.collisonVertices[1])
-          .multiplyScalar(0.5);
-        this.computeCollisionNormal(obb);
-        this.computeCollisionDepth(obb);
-        break;
-      case 3:
-      case 4:
-        const v1 = new Vector3();
-        const v2 = new Vector3();
-        const a = this.collisonVertices[0];
-        const b = this.collisonVertices[1];
-        const c = this.collisonVertices[2];
-        const l1 = this.collisonVertices[0].distanceTo(
-          this.collisonVertices[1]
-        );
-        const l2 = this.collisonVertices[0].distanceTo(
-          this.collisonVertices[2]
-        );
-        const l3 = this.collisonVertices[1].distanceTo(
-          this.collisonVertices[2]
-        );
-        if (Math.max(l1, l2, l3) === l1) {
-          v1.copy(a);
-          v2.copy(b);
-        } else if (Math.max(l1, l2, l3) === l2) {
-          v1.copy(a);
-          v2.copy(c);
-        } else {
-          v1.copy(b);
-          v2.copy(c);
+    obb.getVertices().map((vertex) => {
+      if (this.containsPoint(vertex)) {
+        collisionVertices2.push(vertex);
+      }
+    });
+    let point: Vector3;
+    let normal: Vector3;
+    let depth: number;
+    if (collisionVertices1.length) {
+      switch (collisionVertices1.length) {
+        case 1:
+          point = collisionVertices1[0];
+          break;
+        case 2:
+          // point between the two points in half distance
+          point = new Vector3()
+            .addVectors(collisionVertices1[0], collisionVertices1[1])
+            .multiplyScalar(0.5);
+          break;
+        default:
+          point = this.collisionPointFromThreePoints(collisionVertices1);
+          break;
+      }
+      normal = this.computeCollisionNormal(obb, point);
+      depth = this.computeCollisionDepth(obb, point, normal);
+    } else if (collisionVertices2.length) {
+      switch (collisionVertices2.length) {
+        case 1:
+          point = collisionVertices2[0];
+          break;
+        case 2:
+          // point between the two points in half distance
+          point = new Vector3()
+            .addVectors(collisionVertices2[0], collisionVertices2[1])
+            .multiplyScalar(0.5);
+          break;
+        default:
+          point = this.collisionPointFromThreePoints(collisionVertices2);
+          break;
+      }
+      normal = this.computeCollisionNormal(this, point).negate();
+      depth = this.computeCollisionDepth(this, point, normal);
+    } else {
+      console.log("collision edges");
+      const edgePoints1: {
+        edge: { ray: Ray; length: number };
+        point: Vector3;
+      }[] = [];
+      const edgePoints2: typeof edgePoints1 = [];
+      this.getEdges().map((edge) => {
+        let point = new Vector3();
+        if (
+          obb.intersectRay(edge.ray, point) &&
+          edge.ray.origin.distanceTo(point) <= edge.length
+        )
+          edgePoints1.push({ edge, point });
+      }),
+        obb.getEdges().map((edge) => {
+          let point = new Vector3();
+          if (
+            this.intersectRay(edge.ray, point) &&
+            edge.ray.origin.distanceTo(point) <= edge.length
+          )
+            edgePoints2.push({ edge, point });
+        });
+      console.log("p1", edgePoints1);
+      console.log("p2", edgePoints2);
+      if (edgePoints1.length < edgePoints2.length) {
+        console.log(1);
+        switch (edgePoints1.length) {
+          case 1:
+            point = new Vector3().copy(
+              obb.computeEdgeCollisionPoint(
+                edgePoints1[0].edge,
+                edgePoints1[0].point
+              )
+            );
+            break;
+          default:
+            point = new Vector3();
+            edgePoints1.map((edgePoint) => {
+              let tempPoint = new Vector3().copy(
+                obb.computeEdgeCollisionPoint(edgePoint.edge, edgePoint.point)
+              );
+              point.add(tempPoint);
+            });
+            point.multiplyScalar(1 / edgePoints1.length);
+            break;
         }
-        this.collision.point = new Vector3()
-          .addVectors(v1, v2)
-          .multiplyScalar(0.5);
-        this.computeCollisionNormal(obb);
-        this.computeCollisionDepth(obb);
-        break;
-      default:
-        console.log("simple calculations of collision");
-        this.computeEdgeCollisionPoint(obb);
-        this.computeEdgeCollisionNormal(obb);
-        this.computeCollisionDepth(obb);
-        break;
-    }
-    return this.collision;
-  }
-  computeEdgeCollisionPoint(obb: OBBs) {
-    const firstPoint = new Vector3();
-    const secondPoint = new Vector3();
-    obb.getEdges().map((edge) => {
-      if (
-        this.intersectRay(edge.ray, firstPoint) &&
-        edge.ray.origin.distanceTo(firstPoint) <= edge.length
-      ) {
-        const reversedRay = new Ray(
-          edge.ray.origin
-            .clone()
-            .addScaledVector(edge.ray.direction, edge.length),
-          edge.ray.direction.clone().negate()
-        );
-        this.intersectRay(reversedRay, secondPoint);
-        const point = new Vector3()
-          .addVectors(firstPoint, secondPoint)
-          .multiplyScalar(0.5);
-        this.collision.point = point;
+      } else {
+        console.log(2);
+        switch (edgePoints2.length) {
+          case 1:
+            point = new Vector3().copy(
+              this.computeEdgeCollisionPoint(
+                edgePoints2[0].edge,
+                edgePoints2[0].point
+              )
+            );
+            break;
+          default:
+            point = new Vector3();
+            edgePoints2.map((edgePoint) => {
+              let tempPoint = new Vector3().copy(
+                this.computeEdgeCollisionPoint(edgePoint.edge, edgePoint.point)
+              );
+              point.add(tempPoint);
+            });
+            point.multiplyScalar(1 / edgePoints2.length);
+            break;
+        }
       }
-    });
+      const e1 = edgePoints1.length,
+        e2 = edgePoints2.length;
+      switch (true) {
+        case e1 == e2 && e1 == 1:
+          normal = this.computeEdgeCollisionNormal(obb, point);
+          break;
+        case e1 > e2:
+          normal = this.computeEdgeCollisionNormal(obb, point);
+          break;
+        case e1 < e2:
+          normal = obb.computeEdgeCollisionNormal(this, point).negate();
+          break;
+        default:
+          normal = this.computeCollisionNormal(obb, point);
+          break;
+      }
+      depth = this.computeCollisionDepth(obb, point, normal);
+    }
+    return { point, normal, depth };
   }
-  computeEdgeCollisionNormal(obb: OBBs) {
-    const collsionPoint = this.collision.point!;
+  collisionPointFromThreePoints(vertices: Vector3[]) {
+    const v1 = new Vector3();
+    const v2 = new Vector3();
+    const a = vertices[0];
+    const b = vertices[1];
+    const c = vertices[2];
+    const l1 = vertices[0].distanceTo(vertices[1]);
+    const l2 = vertices[0].distanceTo(vertices[2]);
+    const l3 = vertices[1].distanceTo(vertices[2]);
+    if (Math.max(l1, l2, l3) === l1) {
+      v1.copy(a);
+      v2.copy(b);
+    } else if (Math.max(l1, l2, l3) === l2) {
+      v1.copy(a);
+      v2.copy(c);
+    } else {
+      v1.copy(b);
+      v2.copy(c);
+    }
+    return new Vector3().addVectors(v1, v2).multiplyScalar(0.5);
+  }
+  computeEdgeCollisionPoint(
+    edge: { ray: Ray; length: number },
+    pointOnRay: Vector3
+  ) {
+    const oppositePoint = new Vector3();
+    const reversedRay = new Ray(
+      edge.ray.origin.clone().addScaledVector(edge.ray.direction, edge.length),
+      edge.ray.direction.clone().negate()
+    );
+    this.intersectRay(reversedRay, oppositePoint);
+    const point = new Vector3()
+      .addVectors(pointOnRay, oppositePoint)
+      .multiplyScalar(0.5);
+    return point;
+  }
+  computeEdgeCollisionNormal(obb: OBBs, collisionPoint: Vector3) {
     const closestFaces = obb
       .getFaces()
       .sort(
         (a, b) =>
-          b.distanceToPoint(collsionPoint) - a.distanceToPoint(collsionPoint)
+          b.distanceToPoint(collisionPoint) - a.distanceToPoint(collisionPoint)
       );
     const edgeNormal = new Vector3()
       .addVectors(closestFaces[0].normal, closestFaces[1].normal)
       .normalize();
-    this.collision.normal = edgeNormal;
+    return edgeNormal;
   }
-  computeCollisionNormal(obb: OBBs) {
-    const collisionPoint = this.collision.point!;
+  computeCollisionNormal(obb: OBBs, collisionPoint: Vector3) {
     const result = new Vector3();
     const rayDir = new Vector3()
       .subVectors(collisionPoint, obb.center)
@@ -150,12 +224,9 @@ class OBBs extends OBB {
         result.copy(face.normal);
       }
     });
-    if (this === obb) result.negate();
-    this.collision.normal = new Vector3().copy(result);
+    return result;
   }
-  computeCollisionDepth(obb: OBBs) {
-    const collisionPoint = new Vector3().copy(this.collision.point!);
-    const normal = new Vector3().copy(this.collision.normal!);
+  computeCollisionDepth(obb: OBBs, collisionPoint: Vector3, normal: Vector3) {
     const pointAboveCollision = new Vector3()
       .copy(collisionPoint)
       .add(
@@ -176,7 +247,7 @@ class OBBs extends OBB {
     obb.intersectRay(rayToObb, intersectPoint1);
     this.intersectRay(rayToThis, intersectPoint2);
     const distance = Math.abs(intersectPoint1.distanceTo(intersectPoint2));
-    this.collision.depth = distance;
+    return distance;
   }
   getVertices() {
     const vertices = [
@@ -265,21 +336,6 @@ class OBBs extends OBB {
       normalHelper.position.add(this.center);
       scene.add(normalHelper);
     });
-  }
-  getCollsionHelper(scene: Scene) {
-    const color = new Color(`hsl(${randInt(0, 360)}, 100%, 90%)`);
-    let normalHelper = new ArrowHelper(
-      this.collision.normal,
-      this.collision.point,
-      10,
-      color
-    );
-    const point = new Mesh(
-      new OctahedronGeometry(0.5, 0),
-      new MeshBasicMaterial({ color, wireframe: true })
-    );
-    point.position.add(this.collision.point!);
-    scene.add(point, normalHelper);
   }
   getArrowHelper(scene: Scene, direction: Vector3, origin: Vector3) {
     {
