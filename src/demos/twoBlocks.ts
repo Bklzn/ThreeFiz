@@ -35,15 +35,12 @@ threeFiz.addBox({
 threeFiz.addBox({
   mesh: box2,
   position: new THREE.Vector3(-15, 0, 0),
-  // rotation: new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 1.1, 0.5)),
   restitution: 1,
 });
 threeFiz.init();
 
 box1.castShadow = true;
-// box1.receiveShadow = true;
 box2.castShadow = true;
-// box2.receiveShadow = true;
 
 //Debug
 const stats = new Stats();
@@ -53,18 +50,18 @@ stats.dom.style.setProperty("top", "0");
 const buttons = {
   start: () => threeFiz.resume(),
 
-  pause: () => (threeFiz.STOP = true),
+  pause: () => threeFiz.pause(),
 };
 const box1F = threeFiz.objects[0];
 const gui = new dat.GUI();
 const gui_rotation = gui.addFolder("Angular velocity");
 const gui_position = gui.addFolder("Velocity");
-gui_rotation.add(box1F.angularVelocity, "x", -5, 5).step(0.001);
-gui_rotation.add(box1F.angularVelocity, "y", -5, 5).step(0.001);
-gui_rotation.add(box1F.angularVelocity, "z", -5, 5).step(0.001);
-gui_position.add(box1F.velocity, "x", -10, 10).step(0.001);
-gui_position.add(box1F.velocity, "y", -10, 10).step(0.001);
-gui_position.add(box1F.velocity, "z", -10, 10).step(0.001);
+gui_rotation.add(box1F.getAngularVelocity(), "x", -5, 5).step(0.001);
+gui_rotation.add(box1F.getAngularVelocity(), "y", -5, 5).step(0.001);
+gui_rotation.add(box1F.getAngularVelocity(), "z", -5, 5).step(0.001);
+gui_position.add(box1F.getVelocity(), "x", -10, 10).step(0.001);
+gui_position.add(box1F.getVelocity(), "y", -10, 10).step(0.001);
+gui_position.add(box1F.getVelocity(), "z", -10, 10).step(0.001);
 gui.add(buttons, "start");
 gui.add(buttons, "pause");
 
