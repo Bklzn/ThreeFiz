@@ -7,14 +7,17 @@ import {
   MeshBasicMaterial,
   OctahedronGeometry,
   Plane,
+  PlaneHelper,
   Ray,
   Scene,
   Vector3,
 } from "three";
 import { OBB } from "three/addons/math/OBB.js";
 import { randInt } from "three/src/math/MathUtils.js";
+import RigidBody from "./RigidBody";
 class OBBs extends OBB {
   scene: Scene | undefined;
+  parent: RigidBody;
   debug:
     | {
         obb: Mesh<BoxGeometry>;
@@ -30,8 +33,9 @@ class OBBs extends OBB {
     normal: Vector3;
     depth: number;
   };
-  constructor() {
+  constructor(parent: RigidBody) {
     super();
+    this.parent = parent;
     this.scene = undefined;
     this.debug = {};
     this.collision = {
@@ -116,7 +120,11 @@ class OBBs extends OBB {
     depth =
       finalEdgePoints === edgePoints1
         ? this.collisionDepth_twoPointsDistance(obb, point, normal)
-        : obb.collisionDepth_twoPointsDistance(this, point, normal);
+        : obb.collisionDepth_twoPointsDistance(
+            this,
+            point,
+            normal.clone().negate()
+          );
     return { point, normal, depth };
   }
 
@@ -198,14 +206,16 @@ class OBBs extends OBB {
 
   collisionNormal_closestFace(obb: OBBs, collisionPoint: Vector3) {
     const result = new Vector3();
-    const rayDir = new Vector3()
-      .subVectors(collisionPoint, this.center)
-      .normalize();
-    const ray = new Ray(this.center, rayDir);
     let resultDistance = Infinity;
     obb.getFaces().forEach((face) => {
-      let currDistance = ray.distanceToPlane(face) || Infinity;
-      if (currDistance < resultDistance) {
+      const currDistance = Math.abs(face.distanceToPoint(collisionPoint));
+      const directionToPoint = new Vector3()
+        .subVectors(this.center, collisionPoint)
+        .normalize();
+      if (
+        resultDistance > currDistance &&
+        face.normal.dot(directionToPoint) > 0
+      ) {
         resultDistance = currDistance;
         result.copy(face.normal);
       }

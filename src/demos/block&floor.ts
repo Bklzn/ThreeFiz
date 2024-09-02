@@ -10,9 +10,11 @@ camera.position.set(0, 50, 100);
 const boxGeo = new THREE.BoxGeometry(10, 10, 10);
 const boxMat = new THREE.MeshPhongMaterial({
   color: new THREE.Color("hsl(200, 100%, 80%)"),
+  transparent: true,
+  opacity: 0.5,
 });
-const box1 = new THREE.Mesh(boxGeo, boxMat);
-const floorGeo = new THREE.BoxGeometry(1000, 5, 1000);
+const box = new THREE.Mesh(boxGeo, boxMat);
+const floorGeo = new THREE.BoxGeometry(20, 5, 20);
 const floorMat = new THREE.MeshPhongMaterial({
   color: new THREE.Color("hsl(0, 100%, 80%)"),
 });
@@ -20,12 +22,16 @@ const floor = new THREE.Mesh(floorGeo, floorMat);
 
 //threeFiz
 const threeFiz = new ThreeFiz({ scene });
-threeFiz.addBox({
-  mesh: box1,
-  position: new THREE.Vector3(0, 50, 0),
-  rotation: new THREE.Quaternion().setFromEuler(new THREE.Euler(1, 1.1, 0.5)),
-  restitution: 0.5,
-});
+for (let i = 0; i < 1; i++) {
+  Math.random() * 50 - 100;
+  threeFiz.addBox({
+    mesh: box.clone(),
+    position: new THREE.Vector3(0, 5, 0),
+    velocity: new THREE.Vector3(10, 0, 0),
+    rotation: new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0, 0)),
+    restitution: 0.5,
+  });
+}
 threeFiz.addBox({
   mesh: floor,
   restitution: 0.5,
@@ -33,8 +39,8 @@ threeFiz.addBox({
 });
 threeFiz.init();
 
-box1.castShadow = true;
-box1.receiveShadow = true;
+box.castShadow = true;
+box.receiveShadow = true;
 floor.receiveShadow = true;
 
 //Debug
@@ -46,12 +52,30 @@ threeFiz.objects[0].debug.LinearVelocityVector = {
   color: new THREE.Color("hsl(200, 100%, 80%)"),
   minLength: 1,
 };
+threeFiz.objects[1].debug.LinearVelocityVector = {
+  color: new THREE.Color("hsl(200, 100%, 80%)"),
+  minLength: 1,
+};
 
 const buttons = {
+  pauseOnCollision: false,
   start: () => threeFiz.resume(),
-
   pause: () => threeFiz.pause(),
 };
+const onCollisionInit = (value: boolean) => {
+  if (value)
+    threeFiz.onCollision = () => {
+      threeFiz.pause();
+    };
+  else
+    threeFiz.onCollision = () => {
+      threeFiz.resume();
+    };
+};
+threeFiz.onCollision = () => {
+  threeFiz.pause();
+};
+onCollisionInit(buttons.pauseOnCollision);
 const box1F = threeFiz.objects[0];
 const gui = new dat.GUI();
 const gui_rotation = gui.addFolder("Angular velocity");
@@ -62,6 +86,7 @@ gui_rotation.add(box1F.getAngularVelocity(), "z", -5, 5).step(0.001);
 gui_position.add(box1F.getVelocity(), "x", -10, 10).step(0.001);
 gui_position.add(box1F.getVelocity(), "y", -10, 10).step(0.001);
 gui_position.add(box1F.getVelocity(), "z", -10, 10).step(0.001);
+gui.add(buttons, "pauseOnCollision").onChange(onCollisionInit);
 gui.add(buttons, "start");
 gui.add(buttons, "pause");
 

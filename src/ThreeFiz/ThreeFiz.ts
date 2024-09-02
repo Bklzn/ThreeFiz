@@ -1,7 +1,7 @@
 import Cuboid from "./Cuboid";
-import { Clock, Scene, Vector3 } from "three";
+import { Scene, Vector3 } from "three";
 import World from "./World";
-import { RigidBodyProps } from "./RigidBody";
+import RigidBody, { RigidBodyProps } from "./RigidBody";
 
 type Props = {
   scene: Scene;
@@ -56,7 +56,7 @@ class ThreeFiz {
   resume(): void {
     this.isPaused = false;
   }
-
+  onCollision(object1: RigidBody, object2: RigidBody): void {}
   private detectCollisions(): void {
     for (let i = 0; i < this.objects.length - 1; i++) {
       for (let j = i + 1; j < this.objects.length; j++) {
@@ -64,6 +64,7 @@ class ThreeFiz {
         const objB = this.objects[j];
         if (objA.intersects(objB)) {
           objA.resolveCollision(objB);
+          this.onCollision(objA, objB);
         }
       }
     }

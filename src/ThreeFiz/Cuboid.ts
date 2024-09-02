@@ -10,7 +10,7 @@ class Cuboid extends RigidBody {
     super(params);
     const { width, height, depth } = (this.mesh.geometry as BoxGeometry)
       .parameters;
-    this.collider = new OBBs();
+    this.collider = new OBBs(this);
     this.collider.halfSize = new Vector3(width, height, depth).multiplyScalar(
       0.5
     );
@@ -42,11 +42,8 @@ class Cuboid extends RigidBody {
     }
     const thisdisplacement = (thisVl / (thisVl + objectVl)) * depth;
     const objectdisplacement = (objectVl / (thisVl + objectVl)) * depth;
-    this.position.addScaledVector(normal, thisdisplacement + thisdisplacement);
-    object.position.addScaledVector(
-      normal,
-      -objectdisplacement + objectdisplacement
-    );
+    this.position.addScaledVector(normal, thisdisplacement);
+    object.position.addScaledVector(normal, -objectdisplacement);
   }
   resolveCollision(object: Cuboid) {
     const c = this.collider.getCollision(object.collider);
