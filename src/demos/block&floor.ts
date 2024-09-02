@@ -42,6 +42,11 @@ const stats = new Stats();
 stats.dom.style.setProperty("position", "absolute");
 stats.dom.style.setProperty("top", "0");
 
+threeFiz.objects[0].debug.LinearVelocityVector = {
+  color: new THREE.Color("hsl(200, 100%, 80%)"),
+  minLength: 1,
+};
+
 const buttons = {
   start: () => threeFiz.resume(),
 

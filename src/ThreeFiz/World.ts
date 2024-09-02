@@ -29,6 +29,7 @@ class World {
       object.mesh.updateMatrix();
       object.mesh.updateMatrixWorld();
       object.updateCollider();
+      object.debug.update();
     });
   }
 }

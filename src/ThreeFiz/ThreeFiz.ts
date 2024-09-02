@@ -1,5 +1,5 @@
 import Cuboid from "./Cuboid";
-import { Scene, Vector3 } from "three";
+import { Clock, Scene, Vector3 } from "three";
 import World from "./World";
 import { RigidBodyProps } from "./RigidBody";
 

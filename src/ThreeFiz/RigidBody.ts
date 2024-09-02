@@ -1,4 +1,5 @@
 import { Matrix3, Mesh, Quaternion, Vector3 } from "three";
+import Debug from "./Debug";
 
 type RigidBodyProps = {
   mesh: Mesh;
@@ -11,6 +12,7 @@ type RigidBodyProps = {
   mass: number;
   restitution: number;
   isStatic: boolean;
+  debug: Debug;
 };
 class RigidBody {
   mesh: Mesh;
@@ -23,6 +25,7 @@ class RigidBody {
   mass: number;
   restitution: number;
   isStatic: boolean;
+  debug: Debug;
 
   constructor({
     mesh = new Mesh(),
@@ -53,6 +56,7 @@ class RigidBody {
       console.warn("Restitution cannot be greater than 1 or less than 0");
     }
     this.restitution = Math.min(Math.max(restitution, 0), 1);
+    this.debug = new Debug(this);
   }
 
   updatePosition(dT: number) {
