@@ -16,7 +16,18 @@ import { OBB } from "three/addons/math/OBB.js";
 import { randInt } from "three/src/math/MathUtils.js";
 import RigidBody from "./RigidBody";
 class OBBs extends OBB {
-  scene: Scene | undefined;
+  vertices: {
+    initialValues: Vector3[];
+    values: Vector3[];
+  };
+  edges: {
+    initialValues: ReturnType<OBBs["getEdges"]>;
+    values: ReturnType<OBBs["getEdges"]>;
+  };
+  faces: {
+    initialValues: Plane[];
+    values: Plane[];
+  };
   parent: RigidBody;
   debug:
     | {
@@ -33,10 +44,25 @@ class OBBs extends OBB {
     normal: Vector3;
     depth: number;
   };
-  constructor(parent: RigidBody) {
+  constructor(parent: RigidBody, halfSize: Vector3) {
     super();
     this.parent = parent;
-    this.scene = undefined;
+    this.halfSize = halfSize;
+    const vertices = this.getVertices();
+    this.vertices = {
+      initialValues: vertices.map((v) => v.clone()),
+      values: vertices,
+    };
+    const edges = this.getEdges();
+    const faces = this.getFaces();
+    this.edges = {
+      initialValues: edges.map((e) => ({ ...e, ray: e.ray.clone() })),
+      values: edges,
+    };
+    this.faces = {
+      initialValues: faces.map((f) => f.clone()),
+      values: faces,
+    };
     this.debug = {};
     this.collision = {
       point: new Vector3(),
@@ -45,8 +71,16 @@ class OBBs extends OBB {
     };
   }
 
-  getCollision(obb: OBBs, scene?: Scene) {
-    this.scene = scene;
+  updateMatrrix() {
+    this.updateVertices();
+    this.updateEdges();
+    this.updateFaces();
+  }
+  getCollision(obb: OBBs) {
+    console.log("collison");
+    console.log(this);
+    this.updateMatrrix();
+    obb.updateMatrrix();
     const collisionVertices1 = this.getVerticesInCollision(obb);
     const collisionVertices2 = obb.getVerticesInCollision(this);
     if (collisionVertices1.length + collisionVertices2.length > 0) {
@@ -103,6 +137,7 @@ class OBBs extends OBB {
   }
 
   edgeCollision(obb: OBBs) {
+    console.log("edge");
     let point: Vector3;
     let normal: Vector3;
     let depth: number;
@@ -270,10 +305,17 @@ class OBBs extends OBB {
       new Vector3(this.halfSize.x, this.halfSize.y, this.halfSize.z),
       new Vector3(this.halfSize.x, -this.halfSize.y, this.halfSize.z),
     ];
-    for (let i = 0; i < vertices.length; i++) {
-      vertices[i].applyMatrix3(this.rotation).add(this.center);
-    }
     return vertices;
+  }
+  updateVertices() {
+    const initial = this.vertices.initialValues;
+    console.log(initial);
+    this.vertices.values.forEach((vertex, i) => {
+      vertex
+        .copy(initial[i].clone())
+        .applyMatrix3(this.rotation)
+        .add(this.center);
+    });
   }
 
   getVerticesInCollision(obb: OBBs) {
@@ -287,7 +329,7 @@ class OBBs extends OBB {
   }
 
   getEdges(): { ray: Ray; length: number }[] {
-    const v = this.getVertices();
+    const v = this.vertices.values;
     // each group is set of source vertex and directions for rays to define edges
     // groups are determined by the order of the vertices in getVertices()
     const vGroups = [
@@ -306,6 +348,15 @@ class OBBs extends OBB {
       });
     });
     return rays;
+  }
+
+  updateEdges() {
+    const initial = this.edges.initialValues;
+    this.edges.values.forEach((edge, i) => {
+      edge.ray.copy(initial[i].ray);
+      edge.ray.origin.applyMatrix3(this.rotation).add(this.center);
+      edge.ray.direction.applyMatrix3(this.rotation);
+    });
   }
 
   getEdgesIntersections(obb: OBBs) {
@@ -347,6 +398,15 @@ class OBBs extends OBB {
     );
   }
 
+  updateFaces() {
+    this.faces.values.forEach((face) => {
+      face.normal.applyMatrix3(this.rotation);
+      face.constant = -this.center
+        .clone()
+        .add(this.halfSize.clone().multiply(face.normal))
+        .dot(face.normal);
+    });
+  }
   getNormalsHelper(scene: Scene) {
     const color = new Color(`hsl(${randInt(0, 360)}, 100%, 70%)`);
     const normals = this.getNormals();

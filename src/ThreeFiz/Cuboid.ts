@@ -1,4 +1,4 @@
-import { BoxGeometry, Vector3 } from "three";
+import { BoxGeometry, Scene, Vector3 } from "three";
 import { OBBs } from "./OBB";
 import RigidBody, { RigidBodyProps } from "./RigidBody";
 import Collision from "./Collision";
@@ -10,10 +10,8 @@ class Cuboid extends RigidBody {
     super(params);
     const { width, height, depth } = (this.mesh.geometry as BoxGeometry)
       .parameters;
-    this.collider = new OBBs(this);
-    this.collider.halfSize = new Vector3(width, height, depth).multiplyScalar(
-      0.5
-    );
+    const halfSize = new Vector3(width, height, depth).multiplyScalar(0.5);
+    this.collider = new OBBs(this, halfSize);
     this.inertiaTensor.set(
       (this.mass / 12) * (height ** 2 + depth ** 2),
       0,
@@ -47,6 +45,7 @@ class Cuboid extends RigidBody {
   }
   resolveCollision(object: Cuboid) {
     const c = this.collider.getCollision(object.collider);
+    this.collider.showCollision(this.mesh.parent as Scene);
     if (c.depth > 0)
       this.oldResolveFunc(
         object,
