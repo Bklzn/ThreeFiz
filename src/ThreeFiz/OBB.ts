@@ -49,18 +49,18 @@ class OBBs extends OBB {
     this.halfSize = halfSize;
     const vertices = this.getVertices();
     this.vertices = {
-      initialValues: vertices.map((v) => v.clone()),
-      values: vertices,
+      initialValues: vertices,
+      values: vertices.map((v) => v.clone()),
     };
     const edges = this.getEdges();
     const faces = this.getFaces();
     this.edges = {
-      initialValues: edges.map((e) => ({ ...e, ray: e.ray.clone() })),
-      values: edges,
+      initialValues: edges,
+      values: edges.map((e) => ({ ...e, ray: e.ray.clone() })),
     };
     this.faces = {
-      initialValues: faces.map((f) => f.clone()),
-      values: faces,
+      initialValues: faces,
+      values: faces.map((f) => f.clone()),
     };
     this.debug = {};
     this.collision = {
@@ -70,14 +70,14 @@ class OBBs extends OBB {
     };
   }
 
-  updateMatrrix() {
+  updateValues() {
     this.updateVertices();
     this.updateEdges();
     this.updateFaces();
   }
   getCollision(obb: OBBs) {
-    this.updateMatrrix();
-    obb.updateMatrrix();
+    this.updateValues();
+    obb.updateValues();
     const collisionVertices1 = this.getVerticesInCollision(obb);
     const collisionVertices2 = obb.getVerticesInCollision(this);
     if (collisionVertices1.length + collisionVertices2.length > 0) {
@@ -93,41 +93,19 @@ class OBBs extends OBB {
     return this.collision;
   }
 
-  verticesCollision(obb: OBBs, vertices1: Vector3[], vertices2: Vector3[]) {
+  verticesCollision(
+    obb: OBBs,
+    vertices1: Vector3[],
+    vertices2: Vector3[]
+  ): typeof this.collision {
     let point: Vector3;
     let normal: Vector3;
     let depth: number;
     if (vertices1.length) {
-      switch (vertices1.length) {
-        case 1:
-          point = vertices1[0];
-          break;
-        case 2:
-          // point between the two points in half distance
-          point = new Vector3()
-            .addVectors(vertices1[0], vertices1[1])
-            .multiplyScalar(0.5);
-          break;
-        default:
-          point = this.collisionPoint_ThreePoints(vertices1);
-          break;
-      }
+      point = this.collisionPoint_Vertices(vertices1);
       normal = this.collisionNormal_closestFace(obb, point);
     } else {
-      switch (vertices2.length) {
-        case 1:
-          point = vertices2[0];
-          break;
-        case 2:
-          // point between the two points in half distance
-          point = new Vector3()
-            .addVectors(vertices2[0], vertices2[1])
-            .multiplyScalar(0.5);
-          break;
-        default:
-          point = this.collisionPoint_ThreePoints(vertices2);
-          break;
-      }
+      point = this.collisionPoint_Vertices(vertices2);
       normal = obb.collisionNormal_closestFace(this, point).negate();
     }
     depth = this.collisionDepth_projection(obb, normal);
@@ -141,7 +119,7 @@ class OBBs extends OBB {
     const edgePoints1 = this.getEdgesIntersections(obb);
     const edgePoints2 = obb.getEdgesIntersections(this);
     point =
-      edgePoints1.length > edgePoints2.length
+      edgePoints1.length > edgePoints2.length && edgePoints2.length > 0
         ? this.collisionPoint_Edge(edgePoints2)
         : obb.collisionPoint_Edge(edgePoints1);
     normal = this.collisionNormal_Edge(
@@ -205,26 +183,11 @@ class OBBs extends OBB {
     }
   }
 
-  collisionPoint_ThreePoints(vertices: Vector3[]) {
-    const v1 = new Vector3();
-    const v2 = new Vector3();
-    const a = vertices[0];
-    const b = vertices[1];
-    const c = vertices[2];
-    const l1 = vertices[0].distanceTo(vertices[1]);
-    const l2 = vertices[0].distanceTo(vertices[2]);
-    const l3 = vertices[1].distanceTo(vertices[2]);
-    if (Math.max(l1, l2, l3) === l1) {
-      v1.copy(a);
-      v2.copy(b);
-    } else if (Math.max(l1, l2, l3) === l2) {
-      v1.copy(a);
-      v2.copy(c);
-    } else {
-      v1.copy(b);
-      v2.copy(c);
-    }
-    return new Vector3().addVectors(v1, v2).multiplyScalar(0.5);
+  collisionPoint_Vertices(vertices: Vector3[]) {
+    const centerPoint = new Vector3();
+    vertices.map((v) => centerPoint.add(v));
+    centerPoint.multiplyScalar(1 / vertices.length);
+    return centerPoint;
   }
 
   collisionPoint_Ray(
@@ -315,10 +278,11 @@ class OBBs extends OBB {
     });
     return { min, max };
   }
+
   getClosestVertexToPoint(point: Vector3) {
-    return this.vertices.values.sort(
-      (a, b) => a.distanceTo(point) - b.distanceTo(point)
-    )[0];
+    return this.vertices.values.reduce((acc, curr) =>
+      acc.distanceTo(point) < curr.distanceTo(point) ? acc : curr
+    );
   }
   getVertices() {
     const vertices = [
@@ -517,4 +481,5 @@ class OBBs extends OBB {
     this.debug.obb.position.copy(this.center);
   }
 }
+
 export { OBBs };

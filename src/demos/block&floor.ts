@@ -21,7 +21,6 @@ const floorMat = new THREE.MeshPhongMaterial({
   opacity: 0.5,
 });
 const floor = new THREE.Mesh(floorGeo, floorMat);
-
 //threeFiz
 const threeFiz = new ThreeFiz({ scene });
 for (let i = 0; i < 10; i++) {
