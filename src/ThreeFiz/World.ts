@@ -23,9 +23,9 @@ class World {
     objects.forEach((object) => {
       if (!object.isStatic) {
         this.applyGravity(object, dT);
-        object.updatePosition(dT);
-        object.updateRotation(dT);
       }
+      object.updatePosition(dT);
+      object.updateRotation(dT);
       object.mesh.updateMatrix();
       object.mesh.updateMatrixWorld();
       object.updateCollider();

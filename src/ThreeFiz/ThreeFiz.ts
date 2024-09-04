@@ -33,11 +33,8 @@ class ThreeFiz {
   }
 
   init(): void {
-    this.objects.forEach((object) => {
-      this.scene.add(object.mesh);
-      object.mesh.position.copy(object.getPosition());
-    });
     this.lastTicks = Date.now();
+    this.world.updateObjects(this.objects, 0);
   }
 
   setGravity(gravity: Vector3): void {
@@ -56,7 +53,7 @@ class ThreeFiz {
   resume(): void {
     this.isPaused = false;
   }
-  onCollision(object1: RigidBody, object2: RigidBody): void {}
+  onCollision(_object1: RigidBody, _object2: RigidBody): void {}
   private detectCollisions(): void {
     for (let i = 0; i < this.objects.length - 1; i++) {
       for (let j = i + 1; j < this.objects.length; j++) {

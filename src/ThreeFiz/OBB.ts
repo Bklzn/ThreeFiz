@@ -7,7 +7,6 @@ import {
   MeshBasicMaterial,
   OctahedronGeometry,
   Plane,
-  PlaneHelper,
   Ray,
   Scene,
   Vector3,
@@ -77,13 +76,12 @@ class OBBs extends OBB {
     this.updateFaces();
   }
   getCollision(obb: OBBs) {
-    console.log("collison");
-    console.log(this);
     this.updateMatrrix();
     obb.updateMatrrix();
     const collisionVertices1 = this.getVerticesInCollision(obb);
     const collisionVertices2 = obb.getVerticesInCollision(this);
     if (collisionVertices1.length + collisionVertices2.length > 0) {
+      // TODO: case for intersection this.vertices and obb.edges
       this.collision = this.verticesCollision(
         obb,
         collisionVertices1,
@@ -137,15 +135,15 @@ class OBBs extends OBB {
   }
 
   edgeCollision(obb: OBBs) {
-    console.log("edge");
     let point: Vector3;
     let normal: Vector3;
     let depth: number;
     const edgePoints1 = this.getEdgesIntersections(obb);
     const edgePoints2 = obb.getEdgesIntersections(this);
-    let finalEdgePoints = edgePoints1;
-    if (edgePoints1.length > edgePoints2.length) finalEdgePoints = edgePoints2;
-    point = this.collisionPoint_Edge(obb, finalEdgePoints);
+    point =
+      edgePoints1.length > edgePoints2.length
+        ? this.collisionPoint_Edge(edgePoints2)
+        : obb.collisionPoint_Edge(edgePoints1);
     normal = this.collisionNormal_Edge(
       obb,
       point,
@@ -153,21 +151,21 @@ class OBBs extends OBB {
       edgePoints2.length
     );
     depth =
-      finalEdgePoints === edgePoints1
-        ? this.collisionDepth_twoPointsDistance(obb, point, normal)
-        : obb.collisionDepth_twoPointsDistance(
+      edgePoints1.length > edgePoints2.length
+        ? obb.collisionDepth_twoPointsDistance(
             this,
             point,
             normal.clone().negate()
-          );
+          )
+        : this.collisionDepth_twoPointsDistance(obb, point, normal);
     return { point, normal, depth };
   }
 
-  collisionPoint_Edge(obb: OBBs, edgePoints: any[]) {
+  collisionPoint_Edge(edgePoints: any[]) {
     const point = new Vector3();
     edgePoints.map((p) => {
       const tempPoint = new Vector3().copy(
-        obb.collisionPoint_Ray(p.edge, p.point)
+        this.collisionPoint_Ray(p.edge, p.point)
       );
       point.add(tempPoint);
     });
@@ -181,13 +179,27 @@ class OBBs extends OBB {
     l1: Number,
     l2: Number
   ) {
+    const vertex1 = this.getClosestVertexToPoint(collisionPoint);
+    const vertex2 = obb.getClosestVertexToPoint(collisionPoint);
     switch (true) {
       case l1 == l2 && l1 == 1:
-        return obb.collisionNormal_twoClosestFaces(collisionPoint);
+        return this.collisionNormal_ClosestPoints(
+          collisionPoint,
+          vertex1,
+          vertex2
+        );
       case l1 > l2:
-        return obb.collisionNormal_twoClosestFaces(collisionPoint);
+        return this.collisionNormal_ClosestPoints(
+          collisionPoint,
+          vertex1,
+          vertex2
+        );
       case l1 < l2:
-        return this.collisionNormal_twoClosestFaces(collisionPoint).negate();
+        return this.collisionNormal_ClosestPoints(
+          collisionPoint,
+          vertex1,
+          vertex2
+        );
       default:
         return this.collisionNormal_closestFace(obb, collisionPoint);
     }
@@ -215,7 +227,10 @@ class OBBs extends OBB {
     return new Vector3().addVectors(v1, v2).multiplyScalar(0.5);
   }
 
-  collisionPoint_Ray(edge: { ray: Ray; length: number }, pointOnRay: Vector3) {
+  collisionPoint_Ray(
+    edge: ReturnType<OBBs["getEdges"]>[number],
+    pointOnRay: Vector3
+  ) {
     const oppositePoint = new Vector3();
     const reversedRay = new Ray(
       edge.ray.origin.clone().addScaledVector(edge.ray.direction, edge.length),
@@ -228,21 +243,28 @@ class OBBs extends OBB {
     return point;
   }
 
-  collisionNormal_twoClosestFaces(collisionPoint: Vector3) {
-    const closestFaces = this.getFaces().sort(
-      (a, b) =>
-        b.distanceToPoint(collisionPoint) - a.distanceToPoint(collisionPoint)
+  collisionNormal_ClosestPoints(
+    collisionPoint: Vector3,
+    vertex1: Vector3,
+    vertex2: Vector3
+  ) {
+    const plane = new Plane().setFromCoplanarPoints(
+      collisionPoint,
+      vertex1,
+      vertex2
     );
-    const edgeNormal = new Vector3()
-      .addVectors(closestFaces[0].normal, closestFaces[1].normal)
+    const diretionToThis = new Vector3()
+      .subVectors(this.center, collisionPoint)
       .normalize();
-    return edgeNormal;
+    const normal = plane.normal;
+    if (diretionToThis.dot(plane.normal) < 0) normal.negate();
+    return plane.normal;
   }
 
   collisionNormal_closestFace(obb: OBBs, collisionPoint: Vector3) {
     const result = new Vector3();
     let resultDistance = Infinity;
-    obb.getFaces().forEach((face) => {
+    obb.faces.values.forEach((face) => {
       const currDistance = Math.abs(face.distanceToPoint(collisionPoint));
       const directionToPoint = new Vector3()
         .subVectors(this.center, collisionPoint)
@@ -283,7 +305,7 @@ class OBBs extends OBB {
   }
 
   getOBBProjection(normal: Vector3) {
-    const vertices = this.getVertices();
+    const vertices = this.vertices.values;
     let min = Infinity;
     let max = -Infinity;
     vertices.forEach((vertex) => {
@@ -293,7 +315,11 @@ class OBBs extends OBB {
     });
     return { min, max };
   }
-
+  getClosestVertexToPoint(point: Vector3) {
+    return this.vertices.values.sort(
+      (a, b) => a.distanceTo(point) - b.distanceTo(point)
+    )[0];
+  }
   getVertices() {
     const vertices = [
       new Vector3(-this.halfSize.x, -this.halfSize.y, -this.halfSize.z),
@@ -309,7 +335,6 @@ class OBBs extends OBB {
   }
   updateVertices() {
     const initial = this.vertices.initialValues;
-    console.log(initial);
     this.vertices.values.forEach((vertex, i) => {
       vertex
         .copy(initial[i].clone())
@@ -320,7 +345,7 @@ class OBBs extends OBB {
 
   getVerticesInCollision(obb: OBBs) {
     const list: Vector3[] = [];
-    this.getVertices().map((vertex) => {
+    this.vertices.values.map((vertex) => {
       if (obb.containsPoint(vertex)) {
         list.push(vertex);
       }
@@ -331,7 +356,7 @@ class OBBs extends OBB {
   getEdges(): { ray: Ray; length: number }[] {
     const v = this.vertices.values;
     // each group is set of source vertex and directions for rays to define edges
-    // groups are determined by the order of the vertices in getVertices()
+    // groups are determined by the order of the vertices in this.vertices.values
     const vGroups = [
       { src: v[1], dir: [v[0], v[2], v[5]] },
       { src: v[3], dir: [v[0], v[2], v[7]] },
@@ -364,7 +389,7 @@ class OBBs extends OBB {
       edge: ReturnType<OBBs["getEdges"]>[number];
       point: Vector3;
     }[] = [];
-    this.getEdges().map((edge) => {
+    this.edges.values.map((edge) => {
       let point = new Vector3();
       if (
         obb.intersectRay(edge.ray, point) &&
@@ -399,7 +424,9 @@ class OBBs extends OBB {
   }
 
   updateFaces() {
-    this.faces.values.forEach((face) => {
+    const initial = this.faces.initialValues;
+    this.faces.values.forEach((face, i) => {
+      face.normal.copy(initial[i].normal);
       face.normal.applyMatrix3(this.rotation);
       face.constant = -this.center
         .clone()

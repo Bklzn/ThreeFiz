@@ -1,4 +1,4 @@
-import { BoxGeometry, Scene, Vector3 } from "three";
+import { BoxGeometry, Vector3 } from "three";
 import { OBBs } from "./OBB";
 import RigidBody, { RigidBodyProps } from "./RigidBody";
 import Collision from "./Collision";
@@ -45,7 +45,6 @@ class Cuboid extends RigidBody {
   }
   resolveCollision(object: Cuboid) {
     const c = this.collider.getCollision(object.collider);
-    this.collider.showCollision(this.mesh.parent as Scene);
     if (c.depth > 0)
       this.oldResolveFunc(
         object,

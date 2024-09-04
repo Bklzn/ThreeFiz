@@ -14,7 +14,7 @@ const boxMat = new THREE.MeshPhongMaterial({
   opacity: 0.5,
 });
 const box = new THREE.Mesh(boxGeo, boxMat);
-const floorGeo = new THREE.BoxGeometry(20, 5, 20);
+const floorGeo = new THREE.BoxGeometry(500, 5, 500);
 const floorMat = new THREE.MeshPhongMaterial({
   color: new THREE.Color("hsl(0, 100%, 80%)"),
   transparent: true,
@@ -24,13 +24,13 @@ const floor = new THREE.Mesh(floorGeo, floorMat);
 
 //threeFiz
 const threeFiz = new ThreeFiz({ scene });
-for (let i = 0; i < 1; i++) {
-  Math.random() * 50 - 100;
+for (let i = 0; i < 10; i++) {
+  const random = Math.random() * 100 - 50;
   threeFiz.addBox({
     mesh: box.clone(),
-    position: new THREE.Vector3(15, 10, 0),
-    velocity: new THREE.Vector3(0, -50, 0),
-    rotation: new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0, -0.1)),
+    position: new THREE.Vector3(random - 1, random + 100, random - 3),
+    velocity: new THREE.Vector3(0, 0, 0),
+    rotation: new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0, 0)),
     restitution: 0.5,
   });
 }
@@ -50,17 +50,8 @@ const stats = new Stats();
 stats.dom.style.setProperty("position", "absolute");
 stats.dom.style.setProperty("top", "0");
 
-threeFiz.objects[0].debug.LinearVelocityVector = {
-  color: new THREE.Color("hsl(200, 100%, 80%)"),
-  minLength: 1,
-};
-threeFiz.objects[1].debug.LinearVelocityVector = {
-  color: new THREE.Color("hsl(200, 100%, 80%)"),
-  minLength: 1,
-};
-
 const buttons = {
-  pauseOnCollision: true,
+  pauseOnCollision: false,
   start: () => threeFiz.resume(),
   pause: () => threeFiz.pause(),
 };
@@ -69,16 +60,12 @@ const onCollisionInit = (value: boolean) => {
     threeFiz.onCollision = () => {
       threeFiz.pause();
     };
-    threeFiz.pause();
   } else {
     threeFiz.onCollision = () => {
       threeFiz.resume();
     };
     threeFiz.resume();
   }
-};
-threeFiz.onCollision = () => {
-  threeFiz.pause();
 };
 onCollisionInit(buttons.pauseOnCollision);
 const box1F = threeFiz.objects[0];
