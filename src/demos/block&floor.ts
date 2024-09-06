@@ -4,7 +4,7 @@ import * as dat from "three/examples/jsm/libs/lil-gui.module.min.js";
 import Stats from "three/examples/jsm/libs/stats.module.js";
 import { camera, controls, handleResize, renderer, scene } from "./init";
 
-camera.position.set(0, 50, 100);
+camera.position.set(0, 10, 50);
 
 //objects
 const boxGeo = new THREE.BoxGeometry(10, 10, 10);
@@ -12,23 +12,25 @@ const boxMat = new THREE.MeshPhongMaterial({
   color: new THREE.Color("hsl(200, 100%, 80%)"),
   transparent: true,
   opacity: 0.5,
+  side: THREE.DoubleSide,
 });
 const box = new THREE.Mesh(boxGeo, boxMat);
-const floorGeo = new THREE.BoxGeometry(500, 5, 500);
+const floorGeo = new THREE.BoxGeometry(200, 10, 200);
 const floorMat = new THREE.MeshPhongMaterial({
   color: new THREE.Color("hsl(0, 100%, 80%)"),
   transparent: true,
   opacity: 0.5,
+  side: THREE.DoubleSide,
 });
 const floor = new THREE.Mesh(floorGeo, floorMat);
 //threeFiz
 const threeFiz = new ThreeFiz({ scene });
 for (let i = 0; i < 10; i++) {
-  const random = Math.random() * 100 - 50;
   threeFiz.addBox({
     mesh: box.clone(),
-    position: new THREE.Vector3(random - 1, random + 100, random - 3),
+    position: new THREE.Vector3((i % 5) * 10, 10 + 10 * (i % 2), 0),
     velocity: new THREE.Vector3(0, 0, 0),
+    angularVelocity: new THREE.Vector3(0, 0, 0),
     rotation: new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0, 0)),
     restitution: 0.5,
   });
@@ -50,8 +52,10 @@ stats.dom.style.setProperty("position", "absolute");
 stats.dom.style.setProperty("top", "0");
 
 const buttons = {
-  pauseOnCollision: false,
-  start: () => threeFiz.resume(),
+  pauseOnCollision: true,
+  start: () => {
+    threeFiz.resume();
+  },
   pause: () => threeFiz.pause(),
 };
 const onCollisionInit = (value: boolean) => {
@@ -59,6 +63,7 @@ const onCollisionInit = (value: boolean) => {
     threeFiz.onCollision = () => {
       threeFiz.pause();
     };
+    threeFiz.pause();
   } else {
     threeFiz.onCollision = () => {
       threeFiz.resume();
