@@ -76,6 +76,7 @@ class OBBs extends OBB {
     this.updateAxes();
     this.updateEdges();
   }
+
   getCollision(obb: OBBs) {
     this.updateValues();
     obb.updateValues();
@@ -99,16 +100,14 @@ class OBBs extends OBB {
       }
       this.collision.point = point;
     }
+    if (!this.isNormalHasGoodDirection()) this.collision.normal.negate();
     this.onCollision(this.collision);
     return this.collision;
   }
+
   getNormalAndDepth(obb: OBBs) {
     const thisAxes = this.axes.values.map((a) => a.clone());
     const obbAxes = obb.axes.values.map((a) => a.clone());
-    const collisionPoint = this.collision.point;
-    const directonToCenter = new Vector3()
-      .subVectors(this.center, collisionPoint)
-      .normalize();
     const normal = new Vector3();
     let minDepth = Infinity;
     const AllAxes = [...thisAxes, ...obbAxes];
@@ -129,8 +128,15 @@ class OBBs extends OBB {
         minDepth = depth;
       }
     });
-    if (normal.dot(directonToCenter) < 0) normal.negate();
     return { normal, depth: minDepth };
+  }
+
+  isNormalHasGoodDirection() {
+    const collisionPoint = this.collision.point;
+    const directonToCenter = new Vector3()
+      .subVectors(this.center, collisionPoint)
+      .normalize();
+    return directonToCenter.dot(this.collision.normal) > 0;
   }
 
   collisionPoint_Vertices(
@@ -139,8 +145,9 @@ class OBBs extends OBB {
     vertices2: Vector3[]
   ) {
     let point: Vector3;
-    if (vertices1.length) point = this.getCenterPoint(vertices1);
-    else {
+    if (vertices1.length) {
+      point = this.getCenterPoint(vertices1);
+    } else {
       point = obb.getCenterPoint(vertices2);
     }
     return point;
