@@ -32,16 +32,12 @@ class Cuboid extends RigidBody {
     this.collider.intersectsOBB(object.collider);
 
   resolveIntersection(object: Cuboid, normal: Vector3, depth: number) {
-    let thisVl = this.velocity.length();
-    let objectVl = object.velocity.length();
-    if (thisVl + objectVl === 0) {
-      thisVl = 1;
-      objectVl = 1;
-    }
-    const thisdisplacement = (thisVl / (thisVl + objectVl)) * depth;
-    const objectdisplacement = (objectVl / (thisVl + objectVl)) * depth;
-    this.position.addScaledVector(normal, thisdisplacement);
-    object.position.addScaledVector(normal, -objectdisplacement);
+    const thisState = this.isStatic ? 0 : 1;
+    const objectState = object.isStatic ? 0 : 1;
+    const thisOffset = (thisState / (thisState + objectState)) * depth;
+    const objectOffset = (objectState / (thisState + objectState)) * depth;
+    this.position.addScaledVector(normal, thisOffset);
+    object.position.addScaledVector(normal, -objectOffset);
   }
   resolveCollision(object: Cuboid) {
     const c = this.collider.getCollision(object.collider);
