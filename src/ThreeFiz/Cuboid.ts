@@ -41,7 +41,7 @@ class Cuboid extends RigidBody {
   }
   resolveCollision(object: Cuboid) {
     const c = this.collider.getCollision(object.collider);
-    if (c.depth > 0)
+    if (c.depth > 1e-10)
       this.oldResolveFunc(
         object,
         new Collision(this, object, c.point, c.normal, c.depth)

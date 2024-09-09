@@ -84,7 +84,7 @@ class OBBs extends OBB {
     const { normal, depth } = this.getNormalAndDepth(obb);
     this.collision.normal = normal;
     this.collision.depth = depth;
-    if (depth > 0) {
+    if (depth > 1e-10) {
       const collisionVertices1 = this.getIntersectedVertices(obb);
       const collisionVertices2 = obb.getIntersectedVertices(this);
       if (collisionVertices1.length + collisionVertices2.length > 0) {
@@ -208,7 +208,7 @@ class OBBs extends OBB {
       if (e1_l > e2_l) return inter_edges2;
       return inter_edges1;
     }
-    if (e2_l < 1) {
+    if (e1_l > 0) {
       return inter_edges1;
     }
     return inter_edges2;
