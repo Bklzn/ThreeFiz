@@ -1,6 +1,5 @@
 import { Vector3 } from "three";
 import RigidBody from "./RigidBody";
-import Cuboid from "./Cuboid";
 
 class World {
   private gravity: Vector3;
@@ -19,7 +18,7 @@ class World {
     );
   }
 
-  updateObjects(objects: Cuboid[], dT: number): void {
+  updateObjects(objects: RigidBody[], dT: number): void {
     objects.forEach((object) => {
       if (!object.isStatic) {
         this.applyGravity(object, dT);

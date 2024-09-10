@@ -1,7 +1,6 @@
 import { BoxGeometry, Vector3 } from "three";
 import { OBBs } from "./OBB";
 import RigidBody, { RigidBodyProps } from "./RigidBody";
-import Collision from "./Collision";
 
 class Cuboid extends RigidBody {
   readonly ShapeType = 1;
@@ -24,47 +23,22 @@ class Cuboid extends RigidBody {
       (this.mass / 12) * (width ** 2 + depth ** 2)
     );
   }
-  intersects(object: Cuboid) {
+  intersects(object: RigidBody) {
     this.updateCollider();
-    return this.boxBoxIntersect(object);
+    if (object instanceof Cuboid) return this.boxBoxIntersect(object);
+    return false;
   }
+
+  getCollision(object: Cuboid): {
+    point: Vector3;
+    normal: Vector3;
+    depth: number;
+  } {
+    return this.collider.getCollision(object.collider);
+  }
+
   boxBoxIntersect = (object: Cuboid) =>
     this.collider.intersectsOBB(object.collider);
-
-  resolveIntersection(object: Cuboid, normal: Vector3, depth: number) {
-    const thisState = this.isStatic ? 0 : 1;
-    const objectState = object.isStatic ? 0 : 1;
-    const thisOffset = (thisState / (thisState + objectState)) * depth;
-    const objectOffset = (objectState / (thisState + objectState)) * depth;
-    this.position.addScaledVector(normal, thisOffset);
-    object.position.addScaledVector(normal, -objectOffset);
-  }
-  resolveCollision(object: Cuboid) {
-    const c = this.collider.getCollision(object.collider);
-    if (c.depth > 1e-10)
-      this.oldResolveFunc(
-        object,
-        new Collision(this, object, c.point, c.normal, c.depth)
-      );
-  }
-  oldResolveFunc(object: Cuboid, collision: Collision) {
-    this.resolveIntersection(
-      object,
-      collision.getNormal(),
-      collision.getDepth()
-    );
-
-    const j = collision.getImpulse();
-
-    if (!this.isStatic) {
-      collision.applyLinearVelocity(this, j);
-      collision.applyAngularVelocity(this, j);
-    }
-    if (!object.isStatic) {
-      collision.applyLinearVelocity(object, -j);
-      collision.applyAngularVelocity(object, -j);
-    }
-  }
   updateCollider() {
     this.collider.rotation.identity();
     this.collider.applyMatrix4(this.mesh.matrixWorld);

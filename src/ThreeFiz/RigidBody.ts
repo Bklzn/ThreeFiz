@@ -1,5 +1,6 @@
 import { Matrix3, Mesh, Quaternion, Vector3 } from "three";
 import Debug from "./Debug";
+import Collision from "./Collision";
 
 type RigidBodyProps = {
   mesh: Mesh;
@@ -14,7 +15,7 @@ type RigidBodyProps = {
   isStatic: boolean;
   debug: Debug;
 };
-class RigidBody {
+abstract class RigidBody {
   mesh: Mesh;
   protected position: Vector3;
   protected velocity: Vector3;
@@ -59,6 +60,14 @@ class RigidBody {
     this.debug = new Debug(this);
   }
 
+  abstract intersects(object: RigidBody): boolean;
+  abstract updateCollider(): void;
+  abstract getCollision(object: RigidBody): {
+    point: Vector3;
+    normal: Vector3;
+    depth: number;
+  };
+
   updatePosition(dT: number) {
     this.position.add(this.velocity.clone().multiplyScalar(dT));
     this.mesh.position.copy(this.position);
@@ -98,6 +107,45 @@ class RigidBody {
   }
 
   getInertiaTensor = () => this.inertiaTensor.clone();
+
+  resolveIntersection(object: RigidBody, normal: Vector3, depth: number) {
+    const thisState = this.isStatic ? 0 : 1;
+    const objectState = object.isStatic ? 0 : 1;
+    const thisOffset = (thisState / (thisState + objectState)) * depth;
+    const objectOffset = (objectState / (thisState + objectState)) * depth;
+    this.position.addScaledVector(normal, thisOffset);
+    object.position.addScaledVector(normal, -objectOffset);
+  }
+
+  resolveCollision(object: RigidBody) {
+    const data = this.getCollision(object);
+    if (data.depth > 1e-10) {
+      const collision = new Collision(
+        this,
+        object,
+        data.point,
+        data.normal,
+        data.depth
+      );
+      this.resolveIntersection(
+        object,
+        collision.getNormal(),
+        collision.getDepth()
+      );
+
+      const j = collision.getImpulse();
+
+      if (!this.isStatic) {
+        collision.applyLinearVelocity(this, j);
+        collision.applyAngularVelocity(this, j);
+      }
+      if (!object.isStatic) {
+        collision.applyLinearVelocity(object, -j);
+        collision.applyAngularVelocity(object, -j);
+      }
+    }
+  }
 }
+
 export default RigidBody;
 export type { RigidBodyProps };
