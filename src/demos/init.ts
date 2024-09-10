@@ -33,17 +33,20 @@ renderer.shadowMap.type = PCFSoftShadowMap;
 //scene
 const sunlight = new DirectionalLight(0xffffff, 3);
 sunlight.castShadow = true;
-sunlight.shadow.mapSize.width = 2048;
-sunlight.shadow.mapSize.height = 2048;
-sunlight.shadow.camera.far = 500;
-sunlight.shadow.camera.near = -500;
-sunlight.shadow.camera.right = 500;
-sunlight.shadow.camera.left = -500;
-sunlight.shadow.camera.top = 500;
-sunlight.shadow.camera.bottom = -500;
+sunlight.shadow.mapSize.width = 1024;
+sunlight.shadow.mapSize.height = 1024;
+sunlight.shadow.camera.far = 150;
+sunlight.shadow.camera.near = -130;
+sunlight.shadow.camera.right = 100;
+sunlight.shadow.camera.left = -100;
+sunlight.shadow.camera.top = 100;
+sunlight.shadow.camera.bottom = -100;
 
 sunlight.position.set(10, 10, 10);
 
 scene.add(sunlight);
 
-export { scene, camera, renderer, controls, handleResize };
+handleResize();
+window.addEventListener("resize", handleResize);
+
+export { scene, camera, renderer, controls };
