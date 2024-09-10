@@ -2,6 +2,7 @@ import Cuboid from "./Cuboid";
 import { Scene, Vector3 } from "three";
 import World from "./World";
 import RigidBody, { RigidBodyProps } from "./RigidBody";
+import Sphere from "./Sphere";
 
 type Props = {
   scene: Scene;
@@ -12,7 +13,7 @@ class ThreeFiz {
   private dT: number = 0.0;
   private accumulator: number = 0.0;
   private lastTicks: number = 0.0;
-  objects: Cuboid[] = [];
+  objects: RigidBody[] = [];
   private readonly scene: Scene;
   private readonly world: World;
   private isPaused: boolean = false;
@@ -27,6 +28,13 @@ class ThreeFiz {
 
   addBox(object: Partial<RigidBodyProps>): void {
     const newObject = new Cuboid(object);
+    this.objects.push(newObject);
+    this.scene.add(newObject.mesh);
+    newObject.mesh.position.copy(newObject.getPosition());
+  }
+
+  addSphere(object: Partial<RigidBodyProps>): void {
+    const newObject = new Sphere(object);
     this.objects.push(newObject);
     this.scene.add(newObject.mesh);
     newObject.mesh.position.copy(newObject.getPosition());
