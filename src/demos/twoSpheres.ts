@@ -5,43 +5,32 @@ import Stats from "three/examples/jsm/libs/stats.module.js";
 import { camera, controls, renderer, scene } from "./init";
 import { Vector3 } from "three";
 
-camera.position.set(0, 20, 50);
+camera.position.set(0, 20, 100);
 
 //objects
-const boxGeo = new THREE.BoxGeometry(20, 20, 20);
-const boxMat = new THREE.MeshPhongMaterial({
+const sphereGeo = new THREE.SphereGeometry(10);
+const sphereMat = new THREE.MeshPhongMaterial({
   color: new THREE.Color("hsl(200, 100%, 80%)"),
-  transparent: true,
-  opacity: 0.5,
-  side: THREE.DoubleSide,
 });
-const box1 = new THREE.Mesh(boxGeo, boxMat);
-const boxMat2 = new THREE.MeshPhongMaterial({
+const sphere1 = new THREE.Mesh(sphereGeo, sphereMat);
+const sphereMat2 = new THREE.MeshPhongMaterial({
   color: new THREE.Color("hsl(0, 100%, 80%)"),
-  transparent: true,
-  opacity: 0.5,
-  side: THREE.DoubleSide,
 });
-const box2 = new THREE.Mesh(boxGeo, boxMat2);
+const sphere2 = new THREE.Mesh(sphereGeo, sphereMat2);
 
 //threeFiz
 const threeFiz = new ThreeFiz({ scene: scene, gravity: new Vector3(0, 0, 0) });
-threeFiz.addBox({
-  mesh: box1,
-  position: new THREE.Vector3(15, 0, 0),
-  velocity: new THREE.Vector3(-30, 0, 0),
-  restitution: 1,
-});
-threeFiz.addBox({
-  mesh: box2,
+threeFiz.addSphere({
+  mesh: sphere1,
   position: new THREE.Vector3(-15, 0, 0),
-  restitution: 1,
 });
+threeFiz.addSphere({
+  mesh: sphere2,
+  position: new THREE.Vector3(25, 15, 0),
+  velocity: new Vector3(-10, 0, 0),
+});
+
 threeFiz.init();
-
-box1.castShadow = true;
-box2.castShadow = true;
-
 //Debug
 const stats = new Stats();
 stats.dom.style.setProperty("position", "absolute");
