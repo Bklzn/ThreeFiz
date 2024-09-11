@@ -136,7 +136,7 @@ class OBBs extends OBB {
           thisAxes[i],
           obbAxes[j]
         );
-        if (crossProduct.lengthSq() > 1 / 1e8)
+        if (crossProduct.lengthSq() > 1e-8)
           AllAxes.push(crossProduct.normalize());
       }
     }
