@@ -67,10 +67,11 @@ class ThreeFiz {
       for (let j = i + 1; j < this.objects.length; j++) {
         const objA = this.objects[i];
         const objB = this.objects[j];
-        if (objA.intersects(objB)) {
-          objA.resolveCollision(objB);
-          this.onCollision(objA, objB);
-        }
+        if (!objA.isStatic || !objB.isStatic)
+          if (objA.intersects(objB)) {
+            objA.resolveCollision(objB);
+            this.onCollision(objA, objB);
+          }
       }
     }
   }
