@@ -117,7 +117,7 @@ class OBBs extends OBB {
     const closestPoint = new Vector3();
     this.clampPoint(sphere.center, closestPoint);
     this.collision.point = closestPoint;
-    const normal = sphere.center.clone().sub(closestPoint).normalize();
+    const normal = closestPoint.clone().sub(sphere.center).normalize();
     this.collision.normal = normal;
     const depth = this.collisionDepth_projectionSphere(sphere, normal);
     this.collision.depth = depth;

@@ -37,10 +37,14 @@ class Sphere extends RigidBody {
     normal: Vector3;
     depth: number;
   } {
-    if (object instanceof Cuboid) return object.getCollision(this);
+    if (object instanceof Cuboid) {
+      const collision = object.getCollision(this);
+      collision.normal.negate();
+      return collision;
+    }
     const point = new Vector3();
     this.collider.clampPoint(object.collider.center, point);
-    const normal = point.clone().sub(object.collider.center).normalize();
+    const normal = this.collider.center.clone().sub(point).normalize();
     const distance = this.position.distanceTo(object.position);
     const depth = Math.abs(
       distance - object.collider.radius - this.collider.radius
