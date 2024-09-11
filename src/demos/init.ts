@@ -69,10 +69,10 @@ const sunlight = new DirectionalLight(0xffffff, 3);
 sunlight.castShadow = true;
 sunlight.shadow.mapSize.width = 1024;
 sunlight.shadow.mapSize.height = 1024;
-sunlight.shadow.camera.far = 150;
-sunlight.shadow.camera.near = -130;
-sunlight.shadow.camera.right = 100;
-sunlight.shadow.camera.left = -100;
+sunlight.shadow.camera.far = 130;
+sunlight.shadow.camera.near = -150;
+sunlight.shadow.camera.right = 150;
+sunlight.shadow.camera.left = -150;
 sunlight.shadow.camera.top = 100;
 sunlight.shadow.camera.bottom = -100;
 
