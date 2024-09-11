@@ -71,17 +71,7 @@ const onCollisionInit = (value: boolean) => {
   }
 };
 onCollisionInit(buttons.pauseOnCollision);
-const box1F = threeFiz.objects[0];
 const gui = new dat.GUI();
-const gui_rotation = gui.addFolder("Angular velocity");
-const gui_position = gui.addFolder("Velocity");
-gui_rotation.add(box1F.getAngularVelocity(), "x", -5, 5).step(0.001);
-gui_rotation.add(box1F.getAngularVelocity(), "y", -5, 5).step(0.001);
-gui_rotation.add(box1F.getAngularVelocity(), "z", -5, 5).step(0.001);
-gui_position.add(box1F.getVelocity(), "x", -10, 10).step(0.001);
-gui_position.add(box1F.getVelocity(), "y", -10, 10).step(0.001);
-gui_position.add(box1F.getVelocity(), "z", -10, 10).step(0.001);
-gui.add(buttons, "pauseOnCollision").onChange(onCollisionInit);
 gui.add(buttons, "start");
 gui.add(buttons, "pause");
 
