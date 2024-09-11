@@ -1,6 +1,7 @@
 import { BoxGeometry, Vector3 } from "three";
 import { OBBs } from "./OBB";
 import RigidBody, { RigidBodyProps } from "./RigidBody";
+import Sphere from "./Sphere";
 
 class Cuboid extends RigidBody {
   readonly ShapeType = 1;
@@ -23,13 +24,15 @@ class Cuboid extends RigidBody {
       (this.mass / 12) * (width ** 2 + depth ** 2)
     );
   }
+
   intersects(object: RigidBody) {
     this.updateCollider();
     if (object instanceof Cuboid) return this.boxBoxIntersect(object);
+    if (object instanceof Sphere) return this.sphereBoxIntersect(object);
     return false;
   }
 
-  getCollision(object: Cuboid): {
+  getCollision(object: Cuboid | Sphere): {
     point: Vector3;
     normal: Vector3;
     depth: number;
@@ -39,6 +42,10 @@ class Cuboid extends RigidBody {
 
   boxBoxIntersect = (object: Cuboid) =>
     this.collider.intersectsOBB(object.collider);
+
+  sphereBoxIntersect = (object: Sphere) =>
+    this.collider.intersectsSphere(object.collider);
+
   updateCollider() {
     this.collider.rotation.identity();
     this.collider.applyMatrix4(this.mesh.matrixWorld);

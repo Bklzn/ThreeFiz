@@ -1,5 +1,6 @@
 import { Sphere as SphereT, SphereGeometry, Vector3, Mesh } from "three";
 import RigidBody, { RigidBodyProps } from "./RigidBody";
+import Cuboid from "./Cuboid";
 
 class Sphere extends RigidBody {
   readonly ShapeType = 0;
@@ -23,17 +24,20 @@ class Sphere extends RigidBody {
       0.4 * this.mass * radius ** 2
     );
   }
+
   intersects(object: RigidBody) {
     this.updateCollider();
     if (object instanceof Sphere) return this.intersectsSphere(object);
+    if (object instanceof Cuboid) return object.sphereBoxIntersect(this);
     return false;
   }
 
-  getCollision(object: Sphere): {
+  getCollision(object: Cuboid | Sphere): {
     point: Vector3;
     normal: Vector3;
     depth: number;
   } {
+    if (object instanceof Cuboid) return object.getCollision(this);
     const point = new Vector3();
     this.collider.clampPoint(object.collider.center, point);
     const normal = point.clone().sub(object.collider.center).normalize();

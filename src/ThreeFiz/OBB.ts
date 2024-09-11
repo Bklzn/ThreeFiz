@@ -8,6 +8,7 @@ import {
   OctahedronGeometry,
   Ray,
   Scene,
+  Sphere,
   Vector3,
 } from "three";
 import { OBB } from "three/addons/math/OBB.js";
@@ -76,10 +77,17 @@ class OBBs extends OBB {
     this.updateAxes();
     this.updateEdges();
   }
-
-  getCollision(obb: OBBs) {
+  getCollision(object: OBBs | Sphere) {
     this.updateValues();
-    obb.updateValues();
+    if (object instanceof OBBs) {
+      object.updateValues();
+      return this.getCollisionOBB(object);
+    } else if (object instanceof Sphere) {
+      return this.getCollisionSphere(object);
+    }
+    return this.collision;
+  }
+  getCollisionOBB(obb: OBBs) {
     let point = obb.center.clone();
     const { normal, depth } = this.getNormalAndDepth(obb);
     this.collision.normal = normal;
@@ -105,6 +113,17 @@ class OBBs extends OBB {
     return this.collision;
   }
 
+  getCollisionSphere(sphere: Sphere) {
+    const closestPoint = new Vector3();
+    this.clampPoint(sphere.center, closestPoint);
+    this.collision.point = closestPoint;
+    const normal = sphere.center.clone().sub(closestPoint).normalize();
+    this.collision.normal = normal;
+    const depth = this.collisionDepth_projectionSphere(sphere, normal);
+    this.collision.depth = depth;
+    return this.collision;
+  }
+
   getNormalAndDepth(obb: OBBs) {
     const thisAxes = this.axes.values.map((a) => a.clone());
     const obbAxes = obb.axes.values.map((a) => a.clone());
@@ -122,7 +141,7 @@ class OBBs extends OBB {
       }
     }
     AllAxes.map((axis) => {
-      let depth = this.collisionDepth_projection(obb, axis.clone());
+      let depth = this.collisionDepth_projectionOBB(obb, axis.clone());
       if (depth < minDepth) {
         normal.copy(axis);
         minDepth = depth;
@@ -221,7 +240,7 @@ class OBBs extends OBB {
     return centerPoint;
   }
 
-  collisionDepth_projection(obb: OBBs, normal: Vector3) {
+  collisionDepth_projectionOBB(obb: OBBs, normal: Vector3) {
     const projection1 = this.getOBBProjection(normal);
     const projection2 = obb.getOBBProjection(normal);
     const overlap =
@@ -229,6 +248,22 @@ class OBBs extends OBB {
       Math.max(projection1.min, projection2.min);
     return overlap;
   }
+
+  collisionDepth_projectionSphere(sphere: Sphere, normal: Vector3) {
+    const sphereCenter = sphere.center;
+    const sphereCenterProjection = normal.dot(sphereCenter);
+    const sphereProjection = {
+      min: sphereCenterProjection - sphere.radius,
+      max: sphereCenterProjection + sphere.radius,
+    };
+    const OBBProjection = this.getOBBProjection(normal);
+    const overlap =
+      Math.min(OBBProjection.max, sphereProjection.max) -
+      Math.max(OBBProjection.min, sphereProjection.min);
+
+    return overlap;
+  }
+
   getOBBProjection(normal: Vector3) {
     const vertices = this.vertices.values;
     let min = Infinity;
