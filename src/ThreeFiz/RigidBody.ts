@@ -119,6 +119,16 @@ abstract class RigidBody {
 
   resolveCollision(object: RigidBody) {
     const data = this.getCollision(object);
+    const { point, normal, depth } = data;
+
+    // for some reason the collision data is not detected correctly sometimes
+    if (
+      Object.values(point).some((v: number) => isNaN(v)) ||
+      Object.values(normal).some((v: number) => isNaN(v)) ||
+      depth === Infinity ||
+      isNaN(depth)
+    )
+      return;
     if (data.depth > 1e-10) {
       const collision = new Collision(
         this,
