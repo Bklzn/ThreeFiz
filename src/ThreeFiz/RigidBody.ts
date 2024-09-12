@@ -1,6 +1,6 @@
 import { Matrix3, Mesh, Quaternion, Vector3 } from "three";
 import Debug from "./Debug";
-import Collision from "./Collision";
+import CollisionInfo from "./Collision";
 
 type RigidBodyProps = {
   mesh: Mesh;
@@ -14,6 +14,7 @@ type RigidBodyProps = {
   restitution: number;
   isStatic: boolean;
   debug: Debug;
+  friction: number;
 };
 abstract class RigidBody {
   mesh: Mesh;
@@ -27,6 +28,7 @@ abstract class RigidBody {
   restitution: number;
   isStatic: boolean;
   debug: Debug;
+  friction: number;
 
   constructor({
     mesh = new Mesh(),
@@ -39,6 +41,7 @@ abstract class RigidBody {
     mass = 1,
     restitution = 0.5,
     isStatic = false,
+    friction = 0.5,
   }: Partial<RigidBodyProps> = {}) {
     this.mesh = mesh;
     this.mesh.matrixAutoUpdate = false;
@@ -57,6 +60,10 @@ abstract class RigidBody {
       console.warn("Restitution cannot be greater than 1 or less than 0");
     }
     this.restitution = Math.min(Math.max(restitution, 0), 1);
+    if (friction > 1 || friction < 0) {
+      console.warn("Friction cannot be greater than 1 or less than 0");
+    }
+    this.friction = Math.min(Math.max(friction, 0), 1);
     this.debug = new Debug(this);
   }
 
@@ -130,7 +137,7 @@ abstract class RigidBody {
     )
       return;
     if (data.depth > 1e-10) {
-      const collision = new Collision(
+      const collision = new CollisionInfo(
         this,
         object,
         data.point,
@@ -144,14 +151,18 @@ abstract class RigidBody {
       );
 
       const j = collision.getImpulse();
+      const jT = collision.getFrictionImpulse();
 
+      const relativeFraction = this.friction * object.friction * 0.5;
       if (!this.isStatic) {
         collision.applyLinearVelocity(this, j);
         collision.applyAngularVelocity(this, j);
+        collision.applyFriction(this, relativeFraction, jT, j);
       }
       if (!object.isStatic) {
         collision.applyLinearVelocity(object, -j);
         collision.applyAngularVelocity(object, -j);
+        collision.applyFriction(object, -relativeFraction, jT, -j);
       }
     }
   }
