@@ -162,7 +162,7 @@ abstract class RigidBody {
       if (!object.isStatic) {
         collision.applyLinearVelocity(object, -j);
         collision.applyAngularVelocity(object, -j);
-        collision.applyFriction(object, -relativeFraction, jT, -j);
+        collision.applyFriction(object, -relativeFraction, -jT, -j);
       }
     }
   }
