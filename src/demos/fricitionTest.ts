@@ -84,7 +84,6 @@ threeFiz.objects.forEach((obj) => {
   obj.mesh.receiveShadow = true;
 });
 
-console.log(threeFiz.objects[0].mesh);
 //Debug
 const stats = new Stats();
 stats.dom.style.setProperty("position", "absolute");
