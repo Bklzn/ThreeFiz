@@ -24,6 +24,7 @@ class ThreeFiz {
   }: Partial<Props> = {}) {
     this.scene = scene;
     this.world = new World(gravity);
+    document.addEventListener("visibilitychange", this.visibilityChange);
   }
 
   addBox(object: Partial<RigidBodyProps>): void {
@@ -75,6 +76,10 @@ class ThreeFiz {
       }
     }
   }
+
+  visibilityChange = () => {
+    if (!document.hidden) this.lastTicks = Date.now();
+  };
 
   step(): void {
     const fixedTimeStep = 0.001;
