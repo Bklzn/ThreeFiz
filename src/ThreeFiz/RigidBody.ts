@@ -1,4 +1,4 @@
-import { Matrix3, Mesh, Quaternion, Vector3 } from "three";
+import { Box3, Matrix3, Mesh, Quaternion, Vector3 } from "three";
 import Debug from "./Debug";
 import CollisionInfo from "./Collision";
 
@@ -15,6 +15,7 @@ type RigidBodyProps = {
   isStatic: boolean;
   debug: Debug;
   friction: number;
+  aabb: Box3;
 };
 abstract class RigidBody {
   mesh: Mesh;
@@ -29,6 +30,7 @@ abstract class RigidBody {
   isStatic: boolean;
   debug: Debug;
   friction: number;
+  aabb: Box3;
 
   constructor({
     mesh = new Mesh(),
@@ -65,6 +67,8 @@ abstract class RigidBody {
     }
     this.friction = Math.min(Math.max(friction, 0), 1);
     this.debug = new Debug(this);
+    this.aabb = new Box3();
+    this.updateAABB();
   }
 
   abstract intersects(object: RigidBody): boolean;
@@ -87,6 +91,10 @@ abstract class RigidBody {
     q.setFromAxisAngle(axis, angle);
     this.rotation.multiplyQuaternions(q, this.rotation);
     this.mesh.quaternion.copy(this.rotation);
+  }
+
+  updateAABB() {
+    this.aabb.setFromObject(this.mesh, true);
   }
 
   getVelocity = () => this.velocity.clone();

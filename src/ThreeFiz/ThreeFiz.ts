@@ -3,6 +3,7 @@ import { Scene, Vector3 } from "three";
 import World from "./World";
 import RigidBody, { RigidBodyProps } from "./RigidBody";
 import Sphere from "./Sphere";
+import SweepAndPrune from "./Sweep&Prune";
 
 type Props = {
   scene: Scene;
@@ -64,17 +65,16 @@ class ThreeFiz {
   }
   onCollision(_object1: RigidBody, _object2: RigidBody): void {}
   private detectCollisions(): void {
-    for (let i = 0; i < this.objects.length - 1; i++) {
-      for (let j = i + 1; j < this.objects.length; j++) {
-        const objA = this.objects[i];
-        const objB = this.objects[j];
-        if (!objA.isStatic || !objB.isStatic)
-          if (objA.intersects(objB)) {
-            objA.resolveCollision(objB);
-            this.onCollision(objA, objB);
-          }
-      }
-    }
+    const potentialCollisionsIndexes = SweepAndPrune(this.objects);
+    potentialCollisionsIndexes.forEach((indexes) => {
+      const objA = this.objects[indexes[0]];
+      const objB = this.objects[indexes[1]];
+      if (!objA.isStatic || !objB.isStatic)
+        if (objA.intersects(objB)) {
+          objA.resolveCollision(objB);
+          this.onCollision(objA, objB);
+        }
+    });
   }
 
   visibilityChange = () => {
