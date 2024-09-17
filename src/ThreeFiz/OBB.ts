@@ -75,7 +75,6 @@ class OBBs extends OBB {
   updateValues() {
     this.updateVertices();
     this.updateAxes();
-    this.updateEdges();
   }
   getCollision(object: OBBs | Sphere) {
     this.updateValues();
@@ -175,6 +174,8 @@ class OBBs extends OBB {
   onCollision(_collision: typeof this.collision) {}
 
   collisionPoint_Edges(obb: OBBs) {
+    this.updateEdges();
+    obb.updateEdges();
     const thisIntersectedEdges = this.getIntersectedEdges(
       obb,
       this.edges.values

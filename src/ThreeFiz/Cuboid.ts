@@ -26,7 +26,6 @@ class Cuboid extends RigidBody {
   }
 
   intersects(object: RigidBody) {
-    this.updateCollider();
     if (object instanceof Cuboid) return this.boxBoxIntersect(object);
     if (object instanceof Sphere) return this.sphereBoxIntersect(object);
     return false;
