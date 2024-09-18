@@ -12,17 +12,19 @@ class Cuboid extends RigidBody {
       .parameters;
     const halfSize = new Vector3(width, height, depth).multiplyScalar(0.5);
     this.collider = new OBBs(this, halfSize);
-    this.inertiaTensor.set(
-      (this.mass / 12) * (height ** 2 + depth ** 2),
-      0,
-      0,
-      0,
-      (this.mass / 12) * (width ** 2 + height ** 2),
-      0,
-      0,
-      0,
-      (this.mass / 12) * (width ** 2 + depth ** 2)
-    );
+    this.invertedInertia
+      .set(
+        (this.mass / 12) * (height ** 2 + depth ** 2),
+        0,
+        0,
+        0,
+        (this.mass / 12) * (width ** 2 + height ** 2),
+        0,
+        0,
+        0,
+        (this.mass / 12) * (width ** 2 + depth ** 2)
+      )
+      .invert();
   }
 
   intersects(object: RigidBody) {

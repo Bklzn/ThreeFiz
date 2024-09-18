@@ -8,7 +8,7 @@ type RigidBodyProps = {
   rotation: Quaternion;
   velocity: Vector3;
   angularVelocity: Vector3;
-  inertiaTensor: Matrix3;
+  invertedInertia: Matrix3;
   density: number;
   mass: number;
   restitution: number;
@@ -23,7 +23,7 @@ abstract class RigidBody {
   protected velocity: Vector3;
   protected rotation: Quaternion;
   protected angularVelocity: Vector3;
-  protected inertiaTensor: Matrix3;
+  protected invertedInertia: Matrix3;
   density: number;
   mass: number;
   restitution: number;
@@ -38,7 +38,7 @@ abstract class RigidBody {
     rotation = new Quaternion(),
     velocity = new Vector3(),
     angularVelocity = new Vector3(),
-    inertiaTensor = new Matrix3(),
+    invertedInertia = new Matrix3(),
     density = 1,
     mass = 1,
     restitution = 0.5,
@@ -51,7 +51,7 @@ abstract class RigidBody {
     this.rotation = rotation;
     this.velocity = velocity;
     this.angularVelocity = angularVelocity;
-    this.inertiaTensor = inertiaTensor;
+    this.invertedInertia = invertedInertia;
     this.mass = mass;
     this.isStatic = isStatic;
     if (density < 0) {
@@ -121,7 +121,7 @@ abstract class RigidBody {
     this.rotation = fn(this.getRotation());
   }
 
-  getInertiaTensor = () => this.inertiaTensor.clone();
+  getInvertedInertia = () => this.invertedInertia.clone();
 
   resolveIntersection(object: RigidBody, normal: Vector3, depth: number) {
     const thisState = this.isStatic ? 0 : 1;
@@ -145,19 +145,8 @@ abstract class RigidBody {
     )
       return;
     if (data.depth > 1e-10) {
-      const collision = new CollisionInfo(
-        this,
-        object,
-        data.point,
-        data.normal,
-        data.depth
-      );
-      this.resolveIntersection(
-        object,
-        collision.getNormal(),
-        collision.getDepth()
-      );
-
+      const collision = new CollisionInfo(this, object, point, normal, depth);
+      this.resolveIntersection(object, normal, depth);
       const j = collision.getImpulse();
       const jT = collision.getFrictionImpulse();
 

@@ -58,8 +58,9 @@ class CollisionInfo {
     return relativeVelocity.dot(this.getTangent(relativeVelocity));
   }
   getRotationalImpulse(obj: RigidBody) {
+    if (obj.isStatic) return new Vector3();
     const r = this.getCollisionArm(obj.getPosition());
-    const invertInertia = obj.getInertiaTensor().invert();
+    const invertInertia = obj.getInvertedInertia();
     return new Vector3()
       .crossVectors(r, this.getNormal())
       .applyMatrix3(invertInertia)
@@ -67,7 +68,7 @@ class CollisionInfo {
   }
 
   getTangentialInertialComponent(tangentialArm: Vector3, obj: RigidBody) {
-    const invertInertia = obj.getInertiaTensor().invert();
+    const invertInertia = obj.getInvertedInertia();
     return tangentialArm.applyMatrix3(invertInertia).dot(tangentialArm);
   }
 
@@ -125,7 +126,7 @@ class CollisionInfo {
   }
 
   applyAngularVelocity(object: RigidBody, j: number) {
-    const invertInertia = object.getInertiaTensor().invert();
+    const invertInertia = object.getInvertedInertia();
     const r = this.getCollisionArm(object.getPosition());
     object.setAngularVelocity((oldV) =>
       oldV.add(
@@ -143,7 +144,7 @@ class CollisionInfo {
     );
     const impulse = tangent.clone().multiplyScalar(impulseMagnitude);
     const invertMass = this.getInvertMass(object);
-    const invertInertia = object.getInertiaTensor().invert();
+    const invertInertia = object.getInvertedInertia();
     const r = this.getCollisionArm(object.getPosition());
     object.setVelocity((oldV) =>
       oldV.add(impulse.clone().multiplyScalar(invertMass))

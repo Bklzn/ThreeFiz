@@ -12,17 +12,19 @@ class Sphere extends RigidBody {
     const { radius } = meshGeometry.parameters;
     this.collider = new SphereT(this.position.clone(), radius);
     this.helper = null;
-    this.inertiaTensor.set(
-      0.4 * this.mass * radius ** 2,
-      0,
-      0,
-      0,
-      0.4 * this.mass * radius ** 2,
-      0,
-      0,
-      0,
-      0.4 * this.mass * radius ** 2
-    );
+    this.invertedInertia
+      .set(
+        0.4 * this.mass * radius ** 2,
+        0,
+        0,
+        0,
+        0.4 * this.mass * radius ** 2,
+        0,
+        0,
+        0,
+        0.4 * this.mass * radius ** 2
+      )
+      .invert();
   }
 
   intersects(object: RigidBody) {
