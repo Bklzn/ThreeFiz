@@ -5,6 +5,8 @@ import RigidBody, { RigidBodyProps } from "./RigidBody";
 import Sphere from "./Sphere";
 import SweepAndPrune from "./Sweep&Prune";
 
+const v = new Vector3();
+
 type Props = {
   scene: Scene;
   timeStep: number;
@@ -32,14 +34,14 @@ class ThreeFiz {
     const newObject = new Cuboid(object);
     this.objects.push(newObject);
     this.scene.add(newObject.mesh);
-    newObject.mesh.position.copy(newObject.getPosition());
+    newObject.mesh.position.copy(newObject.getPosition(v));
   }
 
   addSphere(object: Partial<RigidBodyProps>): void {
     const newObject = new Sphere(object);
     this.objects.push(newObject);
     this.scene.add(newObject.mesh);
-    newObject.mesh.position.copy(newObject.getPosition());
+    newObject.mesh.position.copy(newObject.getPosition(v));
   }
 
   init(): void {

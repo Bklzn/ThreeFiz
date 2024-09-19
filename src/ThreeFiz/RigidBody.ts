@@ -2,6 +2,9 @@ import { Box3, Matrix3, Mesh, Quaternion, Vector3 } from "three";
 import Debug from "./Debug";
 import CollisionInfo from "./Collision";
 
+const v = new Vector3();
+const q = new Quaternion();
+
 type RigidBodyProps = {
   mesh: Mesh;
   position: Vector3;
@@ -97,31 +100,31 @@ abstract class RigidBody {
     this.aabb.setFromObject(this.mesh, true);
   }
 
-  getVelocity = () => this.velocity.clone();
+  getVelocity = (target: Vector3) => target.copy(this.velocity);
 
-  setVelocity(fn: (v: Vector3) => Vector3) {
-    this.velocity = fn(this.getVelocity());
+  setVelocity(fn: (vector: Vector3) => Vector3) {
+    this.velocity.copy(fn(this.getVelocity(v)));
   }
 
-  getAngularVelocity = () => this.angularVelocity.clone();
+  getAngularVelocity = (target: Vector3) => target.copy(this.angularVelocity);
 
-  setAngularVelocity(fn: (v: Vector3) => Vector3) {
-    this.angularVelocity = fn(this.getAngularVelocity());
+  setAngularVelocity(fn: (vector: Vector3) => Vector3) {
+    this.angularVelocity.copy(fn(this.getAngularVelocity(v)));
   }
 
-  getPosition = () => this.position.clone();
+  getPosition = (target: Vector3) => target.copy(this.position);
 
   setPosition(fn: (p: Vector3) => Vector3) {
-    this.position = fn(this.getPosition());
+    this.position.copy(fn(this.getPosition(v)));
   }
 
-  getRotation = () => this.rotation.clone();
+  getRotation = (target: Quaternion) => target.copy(this.rotation);
 
   setRotation(fn: (r: Quaternion) => Quaternion) {
-    this.rotation = fn(this.getRotation());
+    this.rotation.copy(fn(this.getRotation(q)));
   }
 
-  getInvertedInertia = () => this.invertedInertia.clone();
+  getInvertedInertia = (target: Matrix3) => target.copy(this.invertedInertia);
 
   resolveIntersection(object: RigidBody, normal: Vector3, depth: number) {
     const thisState = this.isStatic ? 0 : 1;
@@ -145,21 +148,29 @@ abstract class RigidBody {
     )
       return;
     if (data.depth > 1e-10) {
-      const collision = new CollisionInfo(this, object, point, normal, depth);
+      // collisionInfo.update(this, object, point, normal);
+      const collisionInfo = new CollisionInfo(
+        this,
+        object,
+        point,
+        normal,
+        depth
+      );
       this.resolveIntersection(object, normal, depth);
-      const j = collision.getImpulse();
-      const jT = collision.getFrictionImpulse();
 
-      const relativeFraction = this.friction * object.friction * 0.5;
+      const j = collisionInfo.getImpulse();
+      const jT = collisionInfo.getFrictionImpulse();
+
+      const relativeFraction = (this.friction + object.friction) * 0.5;
       if (!this.isStatic) {
-        collision.applyLinearVelocity(this, j);
-        collision.applyAngularVelocity(this, j);
-        collision.applyFriction(this, relativeFraction, jT, j);
+        collisionInfo.applyLinearVelocity(this, j);
+        collisionInfo.applyAngularVelocity(this, j);
+        collisionInfo.applyFriction(this, relativeFraction, jT, j);
       }
       if (!object.isStatic) {
-        collision.applyLinearVelocity(object, -j);
-        collision.applyAngularVelocity(object, -j);
-        collision.applyFriction(object, -relativeFraction, -jT, -j);
+        collisionInfo.applyLinearVelocity(object, -j);
+        collisionInfo.applyAngularVelocity(object, -j);
+        collisionInfo.applyFriction(object, -relativeFraction, -jT, -j);
       }
     }
   }
