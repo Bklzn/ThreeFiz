@@ -7,15 +7,14 @@ interface EndPoint {
 }
 
 const SweepAndPrune = (objects: RigidBody[]) => {
-  const potentialCollisionsIndexes = new Set<[number, number]>();
+  const potentialCollisionsOnX_Indexes = new Set<number[]>();
+  const potentialCollisionsIndexes = new Set<number[]>();
   const sortedObjects = sortByXAxis(objects);
   const activeIndex = new Set<number>();
-  // console.log(objects);
-  // console.log(sortedObjects);
   for (const obj of sortedObjects) {
     if (obj.isStart) {
       for (const id of activeIndex) {
-        potentialCollisionsIndexes.add([
+        potentialCollisionsOnX_Indexes.add([
           Math.min(id, obj.index),
           Math.max(id, obj.index),
         ]);
@@ -23,20 +22,36 @@ const SweepAndPrune = (objects: RigidBody[]) => {
       activeIndex.add(obj.index);
     } else activeIndex.delete(obj.index);
   }
-  // console.log(objects.length ** 2, potentialCollisionsIndexes.size);
-  // throw new Error("Not implemented");
-  return potentialCollisionsIndexes;
+
+  for (const pair of potentialCollisionsOnX_Indexes) {
+    const [i, j] = pair;
+    if (checkYAxisCollision(objects[i], objects[j])) {
+      potentialCollisionsIndexes.add(pair);
+    }
+  }
+
+  return Array.from(potentialCollisionsIndexes).map((pair) => [
+    pair[0],
+    pair[1],
+  ]);
 };
 
 const sortByXAxis = (objects: RigidBody[]) => {
-  const endpoints: EndPoint[] = new Array(objects.length * 2);
-  let j = 0;
+  const endpoints: EndPoint[] = [];
+
   for (let i = 0; i < objects.length; i++) {
     const obj = objects[i];
-    endpoints[j++] = { isStart: true, value: obj.aabb.min.x, index: i };
-    endpoints[j++] = { isStart: false, value: obj.aabb.max.x, index: i };
+    endpoints.push({ isStart: true, value: obj.aabb.min.x, index: i });
+    endpoints.push({ isStart: false, value: obj.aabb.max.x, index: i });
   }
+
   return endpoints.sort((a, b) => a.value - b.value);
+};
+
+const checkYAxisCollision = (obj1: RigidBody, obj2: RigidBody) => {
+  return (
+    obj1.aabb.min.y <= obj2.aabb.max.y && obj1.aabb.max.y >= obj2.aabb.min.y
+  );
 };
 
 export default SweepAndPrune;
