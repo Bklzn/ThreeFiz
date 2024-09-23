@@ -1,6 +1,6 @@
 import { Box3, Matrix3, Mesh, Quaternion, Vector3 } from "three";
 import Debug from "./Debug";
-import CollisionInfo from "./Collision";
+import * as collisionInfo from "./Collision";
 
 const v = new Vector3();
 const q = new Quaternion();
@@ -148,30 +148,27 @@ abstract class RigidBody {
     )
       return;
     if (data.depth > 1e-10) {
-      // collisionInfo.update(this, object, point, normal);
-      const collisionInfo = new CollisionInfo(
-        this,
-        object,
-        point,
-        normal,
-        depth
-      );
+      collisionInfo.update(this, object, point, normal);
       this.resolveIntersection(object, normal, depth);
 
       const j = collisionInfo.getImpulse();
-      const jT = collisionInfo.getFrictionImpulse();
 
-      const relativeFraction = (this.friction + object.friction) * 0.5;
       if (!this.isStatic) {
         collisionInfo.applyLinearVelocity(this, j);
         collisionInfo.applyAngularVelocity(this, j);
-        collisionInfo.applyFriction(this, relativeFraction, jT, j);
       }
       if (!object.isStatic) {
         collisionInfo.applyLinearVelocity(object, -j);
         collisionInfo.applyAngularVelocity(object, -j);
-        collisionInfo.applyFriction(object, -relativeFraction, -jT, -j);
       }
+
+      const jT = collisionInfo.getFrictionImpulse();
+      const relativeFraction = (this.friction + object.friction) * 0.5;
+
+      if (!this.isStatic)
+        collisionInfo.applyFriction(this, relativeFraction, jT, j);
+      if (!object.isStatic)
+        collisionInfo.applyFriction(object, -relativeFraction, -jT, -j);
     }
   }
 }

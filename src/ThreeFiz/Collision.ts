@@ -1,159 +1,207 @@
 import { Matrix3, Vector3 } from "three";
 import RigidBody from "./RigidBody";
 
-class CollisionInfo {
-  obj_A: RigidBody;
-  obj_B: RigidBody;
-  private point: Vector3;
-  private normal: Vector3;
-  private depth: number;
-  constructor(
-    obj_A: RigidBody,
-    obj_B: RigidBody,
-    point: Vector3,
-    normal: Vector3,
-    depth: number
-  ) {
-    this.obj_A = obj_A;
-    this.obj_B = obj_B;
-    this.point = point;
-    this.normal = normal;
-    this.depth = depth;
+const v1 = new Vector3();
+const v2 = new Vector3();
+const v3 = new Vector3();
+const r1 = new Vector3();
+const r2 = new Vector3();
+const t1 = new Vector3();
+const t2 = new Vector3();
+const relativeVelocity = new Vector3();
+const Point = new Vector3();
+const Normal = new Vector3();
+const Tangent = new Vector3();
+
+class ObjectData {
+  parent: RigidBody;
+  linearVelocity: Vector3;
+  angularVelocity: Vector3;
+  invertedMass: number;
+  invertedInerttia: Matrix3;
+  massCenter: Vector3;
+  collisionArm: Vector3;
+  constructor() {
+    this.parent = null!;
+    this.linearVelocity = new Vector3();
+    this.angularVelocity = new Vector3();
+    this.invertedMass = 0;
+    this.invertedInerttia = new Matrix3();
+    this.massCenter = new Vector3();
+    this.collisionArm = new Vector3();
   }
 
-  getPoint = () => this.point.clone();
-
-  getNormal = () => this.normal.clone();
-
-  getDepth = () => this.depth;
-
-  getCollisionArm = (massCenter: Vector3) => this.point.clone().sub(massCenter);
-
-  getTangentialCollisionArm = (
-    massCenter: Vector3,
-    relativeVelocity: Vector3
-  ) =>
-    this.getCollisionArm(massCenter).cross(this.getTangent(relativeVelocity));
-
-  getTangent = (relativeVelocity: Vector3) => {
-    const velocityAlongNormal = relativeVelocity.dot(this.normal);
-    const velocityNormalComponent = this.normal
-      .clone()
-      .multiplyScalar(velocityAlongNormal);
-    return relativeVelocity.clone().sub(velocityNormalComponent).normalize();
-  };
-
-  getVelocityAtPoint(object: RigidBody) {
-    const omega = object.getAngularVelocity(new Vector3());
-    const r = this.getCollisionArm(object.getPosition(new Vector3()));
-    return object.getVelocity(new Vector3()).add(omega.cross(r));
+  set(object: RigidBody) {
+    this.parent = object;
+    object.getPosition(this.massCenter);
+    object.getInvertedInertia(this.invertedInerttia);
+    this.invertedMass = this.getInvertMass(object);
+    this.update();
   }
 
-  getRelativeVelocity = () =>
-    this.getVelocityAtPoint(this.obj_A).sub(
-      this.getVelocityAtPoint(this.obj_B)
-    );
-
-  getRelativeVelocityAlongTangent(relativeVelocity: Vector3) {
-    return relativeVelocity.dot(this.getTangent(relativeVelocity));
-  }
-  getRotationalImpulse(obj: RigidBody) {
-    if (obj.isStatic) return new Vector3();
-    const r = this.getCollisionArm(obj.getPosition(new Vector3()));
-    const invertInertia = obj.getInvertedInertia(new Matrix3());
-    return new Vector3()
-      .crossVectors(r, this.getNormal())
-      .applyMatrix3(invertInertia)
-      .cross(r);
-  }
-
-  getTangentialInertialComponent(tangentialArm: Vector3, obj: RigidBody) {
-    const invertInertia = obj.getInvertedInertia(new Matrix3());
-    return tangentialArm.applyMatrix3(invertInertia).dot(tangentialArm);
+  update() {
+    this.parent.getVelocity(this.linearVelocity);
+    this.parent.getAngularVelocity(this.angularVelocity);
+    this.collisionArm.set(0, 0, 0);
+    if (!this.parent.isStatic) this.getCollisionArm(Point, this.collisionArm);
   }
 
   getInvertMass(obj: RigidBody) {
     return obj.isStatic ? 0 : 1 / obj.mass;
   }
 
-  getImpulse_Denominator() {
-    const rotA = this.getRotationalImpulse(this.obj_A);
-    const rotB = this.getRotationalImpulse(this.obj_B);
-
-    const invertMassA = this.getInvertMass(this.obj_A);
-    const invertMassB = this.getInvertMass(this.obj_B);
-    return (
-      invertMassA +
-      invertMassB +
-      this.getNormal().dot(rotA) +
-      this.getNormal().dot(rotB)
-    );
-  }
-
-  getImpulse_Numerator = () =>
-    -(1 + (this.obj_A.restitution + this.obj_B.restitution) / 2) *
-    this.getRelativeVelocity().dot(this.getNormal());
-
-  getImpulse = () =>
-    this.getImpulse_Numerator() / this.getImpulse_Denominator();
-
-  getFrictionImpulse = () => {
-    const invertMassA = this.getInvertMass(this.obj_A);
-    const invertMassB = this.getInvertMass(this.obj_B);
-    const relativeVelocity = this.getRelativeVelocity();
-    const TangentialArmA = this.getTangentialCollisionArm(
-      this.obj_A.getPosition(new Vector3()),
-      relativeVelocity
-    );
-    const TangentialArmB = this.getTangentialCollisionArm(
-      this.obj_B.getPosition(new Vector3()),
-      relativeVelocity
-    );
-    const angularComponent =
-      this.getTangentialInertialComponent(TangentialArmA, this.obj_A) +
-      this.getTangentialInertialComponent(TangentialArmB, this.obj_B);
-    return (
-      -this.getRelativeVelocityAlongTangent(relativeVelocity) /
-      (invertMassA + invertMassB + angularComponent)
-    );
-  };
-
-  applyLinearVelocity(object: RigidBody, j: number) {
-    const invertMass = this.getInvertMass(object);
-    object.setVelocity((oldV) =>
-      oldV.add(this.getNormal().multiplyScalar(j * invertMass))
-    );
-  }
-
-  applyAngularVelocity(object: RigidBody, j: number) {
-    const invertInertia = object.getInvertedInertia(new Matrix3());
-    const r = this.getCollisionArm(object.getPosition(new Vector3()));
-    object.setAngularVelocity((oldV) =>
-      oldV.add(
-        new Vector3()
-          .crossVectors(r, this.getNormal().multiplyScalar(j))
-          .applyMatrix3(invertInertia)
-      )
-    );
-  }
-  applyFriction(object: RigidBody, friction: number, jT: number, j: number) {
-    const tangent = this.getTangent(this.getRelativeVelocity());
-    const impulseMagnitude = Math.min(
-      Math.max(jT, -friction * j),
-      friction * j
-    );
-    const impulse = tangent.clone().multiplyScalar(impulseMagnitude);
-    const invertMass = this.getInvertMass(object);
-    const invertInertia = object.getInvertedInertia(new Matrix3());
-    const r = this.getCollisionArm(object.getPosition(new Vector3()));
-    object.setVelocity((oldV) =>
-      oldV.add(impulse.clone().multiplyScalar(invertMass))
-    );
-    object.setAngularVelocity((oldV) =>
-      oldV.add(
-        new Vector3().crossVectors(r, impulse).applyMatrix3(invertInertia)
-      )
-    );
+  getCollisionArm(point: Vector3, target: Vector3) {
+    return target.copy(point).sub(this.massCenter);
   }
 }
-export default CollisionInfo;
+
+const thisObject = new ObjectData();
+const otherObject = new ObjectData();
+
+const update = (
+  obj_A: RigidBody,
+  obj_B: RigidBody,
+  point: Vector3,
+  normal: Vector3
+) => {
+  Point.copy(point);
+  Normal.copy(normal);
+  thisObject.set(obj_A);
+  otherObject.set(obj_B);
+};
+
+const getVelocityAtPoint = (object: ObjectData, target: Vector3) => {
+  const omega = object.angularVelocity;
+  const r = object.collisionArm;
+  const linear = object.linearVelocity;
+  return target.copy(linear).add(v3.crossVectors(omega, r));
+};
+
+const setRelativeVelocity = () => {
+  getVelocityAtPoint(thisObject, v1);
+  getVelocityAtPoint(otherObject, v2);
+  relativeVelocity.copy(v1).sub(v2);
+};
+
+//-----------------normal impulse equation--------------
+const getRotationalImpulse = (obj: ObjectData, target: Vector3) => {
+  if (obj.parent.isStatic) {
+    target.set(0, 0, 0);
+    return target;
+  }
+  const r = obj.collisionArm;
+  const invertInertia = obj.invertedInerttia;
+  return target.crossVectors(r, Normal).applyMatrix3(invertInertia).cross(r);
+};
+
+const getImpulse_Numerator = () =>
+  -(1 + (thisObject.parent.restitution + otherObject.parent.restitution) / 2) *
+  relativeVelocity.dot(Normal);
+
+const getImpulse_Denominator = () => {
+  getRotationalImpulse(thisObject, r1);
+  getRotationalImpulse(otherObject, r2);
+
+  return (
+    thisObject.invertedMass +
+    otherObject.invertedMass +
+    Normal.dot(r1) +
+    Normal.dot(r2)
+  );
+};
+
+const getImpulse = () => {
+  thisObject.update();
+  otherObject.update();
+  setRelativeVelocity();
+  return getImpulse_Numerator() / getImpulse_Denominator();
+};
+
+//-----------------tangent impulse equation--------------
+const setTangent = () => {
+  v3.copy(Normal).multiplyScalar(relativeVelocity.dot(Normal));
+  Tangent.copy(relativeVelocity).sub(v3);
+  if (Tangent.lengthSq() > 1e-6) Tangent.normalize();
+  else Tangent.set(0, 0, 0);
+};
+
+const getTangentialCollisionArm = (collisionArm: Vector3, target: Vector3) =>
+  target.copy(collisionArm).cross(Tangent);
+
+const getTangentialInertialComponent = (
+  tangentialArm: Vector3,
+  invInertia: Matrix3
+) => {
+  return tangentialArm.applyMatrix3(invInertia).dot(tangentialArm);
+};
+
+const getFrictionImpulse_Denominator = () => {
+  getTangentialCollisionArm(thisObject.collisionArm, t1);
+  getTangentialCollisionArm(otherObject.collisionArm, t2);
+  return (
+    thisObject.invertedMass +
+    otherObject.invertedMass +
+    getTangentialInertialComponent(t1, thisObject.invertedInerttia) +
+    getTangentialInertialComponent(t2, otherObject.invertedInerttia)
+  );
+};
+
+const getFrictionImpulse = () => {
+  thisObject.update();
+  otherObject.update();
+  setRelativeVelocity();
+  setTangent();
+  return -relativeVelocity.dot(Tangent) / getFrictionImpulse_Denominator();
+};
+
+//-----------------impulse application--------------
+const applyLinearVelocity = (obj: RigidBody, j: number) => {
+  const object = obj === thisObject.parent ? thisObject : otherObject;
+  const invertMass = object.invertedMass;
+  v1.copy(Normal);
+  object.parent.setVelocity((oldV) =>
+    oldV.add(v1.multiplyScalar(j * invertMass))
+  );
+};
+
+const applyAngularVelocity = (obj: RigidBody, j: number) => {
+  const object = obj === thisObject.parent ? thisObject : otherObject;
+  const invertInertia = object.invertedInerttia;
+  const r = object.collisionArm;
+  v1.copy(Normal);
+  object.parent.setAngularVelocity((oldV) =>
+    oldV.add(
+      v2.crossVectors(r, v1.multiplyScalar(j)).applyMatrix3(invertInertia)
+    )
+  );
+};
+
+const applyFriction = (
+  obj: RigidBody,
+  friction: number,
+  jT: number,
+  j: number
+) => {
+  const object = obj === thisObject.parent ? thisObject : otherObject;
+  const impulseMagnitude = Math.min(Math.max(jT, -friction * j), friction * j);
+  v1.copy(Tangent);
+  v1.multiplyScalar(impulseMagnitude);
+  const invertMass = object.invertedMass;
+  const invertInertia = object.invertedInerttia;
+  const r = object.collisionArm;
+  v2.copy(v1);
+  object.parent.setVelocity((oldV) => oldV.add(v1.multiplyScalar(invertMass)));
+
+  object.parent.setAngularVelocity((oldV) =>
+    oldV.add(v3.crossVectors(r, v2).applyMatrix3(invertInertia))
+  );
+};
+
+export {
+  update,
+  getImpulse,
+  getFrictionImpulse,
+  applyLinearVelocity,
+  applyAngularVelocity,
+  applyFriction,
+};
