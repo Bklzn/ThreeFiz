@@ -23,10 +23,11 @@ class World {
       if (!object.isStatic) {
         this.applyGravity(object, dT);
       }
-      object.mesh.updateMatrix();
-      object.updateAABB();
       object.updatePosition(dT);
       object.updateRotation(dT);
+      object.mesh.updateMatrix();
+      object.mesh.updateMatrixWorld();
+      object.updateAABB();
       object.updateCollider();
       object.debug.update();
     });
