@@ -48,9 +48,14 @@ class Cuboid extends RigidBody {
     this.collider.intersectsSphere(object.collider);
 
   updateCollider() {
-    this.collider.rotation.identity();
-    this.collider.applyMatrix4(this.mesh.matrixWorld);
-    this.collider.center.copy(this.position);
+    if (
+      !this.prevPosition.equals(this.position) ||
+      !this.prevRotation.equals(this.rotation)
+    ) {
+      this.collider.rotation.identity();
+      this.collider.applyMatrix4(this.mesh.matrixWorld);
+      this.collider.center.copy(this.position);
+    }
   }
 }
 export default Cuboid;

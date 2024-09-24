@@ -4,12 +4,13 @@ import Cuboid from "./Cuboid";
 
 class Sphere extends RigidBody {
   readonly ShapeType = 0;
+  readonly meshGeometry: SphereGeometry;
   collider: SphereT;
   helper: Mesh | null;
   constructor(params: Partial<RigidBodyProps>) {
     super(params);
-    const meshGeometry = this.mesh.geometry as SphereGeometry;
-    const { radius } = meshGeometry.parameters;
+    this.meshGeometry = this.mesh.geometry as SphereGeometry;
+    const { radius } = this.meshGeometry.parameters;
     this.collider = new SphereT(this.position.clone(), radius);
     this.helper = null;
     this.invertedInertia
@@ -58,9 +59,28 @@ class Sphere extends RigidBody {
     return distance < object.collider.radius + this.collider.radius;
   }
 
+  updateAABB() {
+    this.aabb.min.set(
+      this.position.x - this.meshGeometry.parameters.radius,
+      this.position.y - this.meshGeometry.parameters.radius,
+      this.position.z - this.meshGeometry.parameters.radius
+    );
+
+    this.aabb.max.set(
+      this.position.x + this.meshGeometry.parameters.radius,
+      this.position.y + this.meshGeometry.parameters.radius,
+      this.position.z + this.meshGeometry.parameters.radius
+    );
+  }
+
   updateCollider() {
-    this.collider.applyMatrix4(this.mesh.matrixWorld);
-    this.collider.center.copy(this.position);
+    if (
+      !this.prevPosition.equals(this.position) ||
+      !this.prevRotation.equals(this.rotation)
+    ) {
+      this.collider.applyMatrix4(this.mesh.matrixWorld);
+      this.collider.center.copy(this.position);
+    }
   }
 }
 export default Sphere;

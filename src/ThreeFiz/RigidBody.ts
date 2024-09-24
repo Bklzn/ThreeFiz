@@ -4,6 +4,7 @@ import * as collisionInfo from "./Collision";
 
 const v = new Vector3();
 const q = new Quaternion();
+const angularAxis = new Vector3();
 
 type RigidBodyProps = {
   mesh: Mesh;
@@ -25,6 +26,8 @@ abstract class RigidBody {
   protected position: Vector3;
   protected velocity: Vector3;
   protected rotation: Quaternion;
+  protected prevPosition: Vector3;
+  protected prevRotation: Quaternion;
   protected angularVelocity: Vector3;
   protected invertedInertia: Matrix3;
   density: number;
@@ -34,6 +37,7 @@ abstract class RigidBody {
   debug: Debug;
   friction: number;
   aabb: Box3;
+  private aabbOrigin: Box3;
 
   constructor({
     mesh = new Mesh(),
@@ -52,6 +56,8 @@ abstract class RigidBody {
     this.mesh.matrixAutoUpdate = false;
     this.position = position;
     this.rotation = rotation;
+    this.prevPosition = this.position.clone();
+    this.prevRotation = this.rotation.clone();
     this.velocity = velocity;
     this.angularVelocity = angularVelocity;
     this.invertedInertia = invertedInertia;
@@ -69,9 +75,13 @@ abstract class RigidBody {
       console.warn("Friction cannot be greater than 1 or less than 0");
     }
     this.friction = Math.min(Math.max(friction, 0), 1);
+    this.mesh.position.copy(this.position);
+    this.mesh.quaternion.copy(this.rotation);
+    this.isStatic && this.mesh.updateMatrix();
     this.debug = new Debug(this);
     this.aabb = new Box3();
-    this.updateAABB();
+    this.aabb.setFromObject(this.mesh, true);
+    this.aabbOrigin = this.aabb.clone();
   }
 
   abstract intersects(object: RigidBody): boolean;
@@ -83,21 +93,30 @@ abstract class RigidBody {
   };
 
   updatePosition(dT: number) {
-    this.position.add(this.velocity.clone().multiplyScalar(dT));
+    if (this.velocity.lengthSq() < 1e-6) return;
+    this.prevPosition.copy(this.position);
+    this.position.add(v.copy(this.velocity).multiplyScalar(dT));
     this.mesh.position.copy(this.position);
   }
 
   updateRotation(dT: number) {
+    if (this.angularVelocity.lengthSq() < 1e-6 && !this.isStatic) return;
+    this.prevRotation.copy(this.rotation);
     let angle = this.angularVelocity.length() * dT;
-    let axis = this.angularVelocity.clone().normalize();
-    let q = new Quaternion();
-    q.setFromAxisAngle(axis, angle);
+    angularAxis.copy(this.angularVelocity).normalize();
+    q.setFromAxisAngle(angularAxis, angle);
     this.rotation.multiplyQuaternions(q, this.rotation);
     this.mesh.quaternion.copy(this.rotation);
   }
 
   updateAABB() {
-    this.aabb.setFromObject(this.mesh, true);
+    if (
+      !this.prevPosition.equals(this.position) ||
+      !this.prevRotation.equals(this.rotation)
+    ) {
+      this.aabb.copy(this.aabbOrigin);
+      this.aabb.applyMatrix4(this.mesh.matrixWorld);
+    }
   }
 
   getVelocity = (target: Vector3) => target.copy(this.velocity);

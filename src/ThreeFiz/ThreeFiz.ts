@@ -41,7 +41,6 @@ class ThreeFiz {
     const newObject = new Sphere(object);
     this.objects.push(newObject);
     this.scene.add(newObject.mesh);
-    newObject.mesh.position.copy(newObject.getPosition(v));
   }
 
   init(): void {

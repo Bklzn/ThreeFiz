@@ -14,6 +14,8 @@ import {
 import { OBB } from "three/addons/math/OBB.js";
 import { randInt } from "three/src/math/MathUtils.js";
 import RigidBody from "./RigidBody";
+
+const v = new Vector3();
 class OBBs extends OBB {
   vertices: {
     initialValues: Vector3[];
@@ -70,6 +72,9 @@ class OBBs extends OBB {
       normal: new Vector3(),
       depth: 0,
     };
+    this.rotation.identity();
+    this.applyMatrix4(this.parent.mesh.matrixWorld);
+    this.center.copy(this.parent.getPosition(v));
   }
 
   updateValues() {
