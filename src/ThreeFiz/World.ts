@@ -20,15 +20,17 @@ class World {
 
   updateObjects(objects: RigidBody[], dT: number): void {
     objects.forEach((object) => {
-      if (!object.isStatic) {
+      if (!object.isStatic) object.needsUpdate = true;
+      if (object.needsUpdate) {
         this.applyGravity(object, dT);
+        object.updatePosition(dT);
+        object.updateRotation(dT);
+        object.mesh.updateMatrix();
+        object.mesh.updateMatrixWorld();
+        object.updateAABB();
+        object.updateCollider();
+        object.needsUpdate = false;
       }
-      object.updatePosition(dT);
-      object.updateRotation(dT);
-      object.mesh.updateMatrix();
-      object.mesh.updateMatrixWorld();
-      object.updateAABB();
-      object.updateCollider();
       object.debug.update();
     });
   }
