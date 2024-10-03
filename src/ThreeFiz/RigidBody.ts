@@ -23,7 +23,7 @@ type RigidBodyProps = {
 };
 abstract class RigidBody {
   mesh: Mesh;
-  protected position: Vector3;
+  position: Vector3;
   protected velocity: Vector3;
   protected rotation: Quaternion;
   protected prevPosition: Vector3;
@@ -37,6 +37,7 @@ abstract class RigidBody {
   debug: Debug;
   friction: number;
   aabb: Box3;
+  needsUpdate: boolean;
   private aabbOrigin: Box3;
 
   constructor({
@@ -77,11 +78,11 @@ abstract class RigidBody {
     this.friction = Math.min(Math.max(friction, 0), 1);
     this.mesh.position.copy(this.position);
     this.mesh.quaternion.copy(this.rotation);
-    this.isStatic && this.mesh.updateMatrix();
     this.debug = new Debug(this);
     this.aabb = new Box3();
     this.aabb.setFromObject(this.mesh, true);
     this.aabbOrigin = this.aabb.clone();
+    this.needsUpdate = true;
   }
 
   abstract intersects(object: RigidBody): boolean;
@@ -93,14 +94,12 @@ abstract class RigidBody {
   };
 
   updatePosition(dT: number) {
-    if (this.velocity.lengthSq() < 1e-6) return;
     this.prevPosition.copy(this.position);
     this.position.add(v.copy(this.velocity).multiplyScalar(dT));
     this.mesh.position.copy(this.position);
   }
 
   updateRotation(dT: number) {
-    if (this.angularVelocity.lengthSq() < 1e-6 && !this.isStatic) return;
     this.prevRotation.copy(this.rotation);
     let angle = this.angularVelocity.length() * dT;
     angularAxis.copy(this.angularVelocity).normalize();
@@ -110,13 +109,8 @@ abstract class RigidBody {
   }
 
   updateAABB() {
-    if (
-      !this.prevPosition.equals(this.position) ||
-      !this.prevRotation.equals(this.rotation)
-    ) {
-      this.aabb.copy(this.aabbOrigin);
-      this.aabb.applyMatrix4(this.mesh.matrixWorld);
-    }
+    this.aabb.copy(this.aabbOrigin);
+    this.aabb.applyMatrix4(this.mesh.matrixWorld);
   }
 
   getVelocity = (target: Vector3) => target.copy(this.velocity);

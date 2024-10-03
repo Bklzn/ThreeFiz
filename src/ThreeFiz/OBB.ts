@@ -458,7 +458,7 @@ class OBBs extends OBB {
   }
 
   debugUpdate() {
-    this.debug.obb.setFromRotationMatrix(
+    this.debug.obb.setRotationFromMatrix(
       new Matrix4().setFromMatrix3(this.rotation)
     );
     this.debug.obb.position.copy(this.center);
