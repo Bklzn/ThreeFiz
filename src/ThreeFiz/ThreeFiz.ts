@@ -7,6 +7,7 @@ import SweepAndPrune from "./Sweep&Prune";
 import SpatialHash from "./SpatialHash";
 
 const v = new Vector3();
+let GridCellSize: number;
 
 type Props = {
   scene: Scene;
@@ -32,7 +33,8 @@ class ThreeFiz {
     this.scene = scene;
     this.world = new World(gravity);
     document.addEventListener("visibilitychange", this.visibilityChange);
-    this.spatialGrid = new SpatialHash(spartialGridCellSize);
+    GridCellSize = spartialGridCellSize;
+    this.spatialGrid = null!;
   }
 
   addBox(object: Partial<RigidBodyProps>): void {
@@ -51,6 +53,7 @@ class ThreeFiz {
   init(): void {
     this.lastTicks = Date.now();
     this.world.updateObjects(this.objects, 0);
+    this.spatialGrid = new SpatialHash(GridCellSize, this.objects.length);
     this.objects.map((object, i) => {
       this.spatialGrid.create(object, i);
     });
@@ -62,7 +65,7 @@ class ThreeFiz {
 
   private update(dT: number): void {
     this.world.updateObjects(this.objects, dT, this.spatialGrid);
-    // this.detectCollisions();
+    this.detectCollisions();
   }
 
   pause(): void {
@@ -81,15 +84,15 @@ class ThreeFiz {
       const neighbors = this.spatialGrid.findNearby(objA, idA);
       neighbors.forEach((id) => {
         const objB = this.objects[id];
-        if (
-          (!objA.isStatic || !objB.isStatic) &&
-          !collisionResolved.get(objB)!.has(objA)
-        )
-          if (objA.intersects(objB)) {
-            collisionResolved.get(objA)!.add(objB);
-            objA.resolveCollision(objB);
-            this.onCollision(objA, objB);
-          }
+        // if (
+        //   (!objA.isStatic || !objB.isStatic) &&
+        //   !collisionResolved.get(objB)!.has(objA)
+        // )
+        //   if (objA.intersects(objB)) {
+        //     collisionResolved.get(objA)!.add(objB);
+        //     objA.resolveCollision(objB);
+        //     this.onCollision(objA, objB);
+        //   }
       });
     });
   }
