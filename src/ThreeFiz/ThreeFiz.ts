@@ -4,8 +4,10 @@ import World from "./World";
 import RigidBody, { RigidBodyProps } from "./RigidBody";
 import Sphere from "./Sphere";
 import SweepAndPrune from "./Sweep&Prune";
+import AABBTree from "./AABBTree";
 
 const v = new Vector3();
+const tree = new AABBTree();
 
 type Props = {
   scene: Scene;
@@ -34,18 +36,27 @@ class ThreeFiz {
     const newObject = new Cuboid(object);
     this.objects.push(newObject);
     this.scene.add(newObject.mesh);
+    tree.insert(
+      newObject,
+      `${newObject.constructor.name}${this.objects.length}`
+    );
     newObject.mesh.position.copy(newObject.getPosition(v));
   }
 
   addSphere(object: Partial<RigidBodyProps>): void {
     const newObject = new Sphere(object);
     this.objects.push(newObject);
+    tree.insert(
+      newObject,
+      `${newObject.constructor.name}${this.objects.length}`
+    );
     this.scene.add(newObject.mesh);
   }
 
   init(): void {
     this.lastTicks = Date.now();
-    this.world.updateObjects(this.objects, 0);
+    this.world.updateObjects(this.objects, tree, 0);
+    console.log(tree.visualizeToString());
   }
 
   setGravity(gravity: Vector3): void {
@@ -53,7 +64,8 @@ class ThreeFiz {
   }
 
   private update(dT: number): void {
-    this.world.updateObjects(this.objects, dT);
+    this.world.updateObjects(this.objects, tree, dT);
+    console.log(tree.visualizeToString());
     this.detectCollisions();
   }
 
@@ -65,6 +77,7 @@ class ThreeFiz {
     this.isPaused = false;
   }
   onCollision(_object1: RigidBody, _object2: RigidBody): void {}
+
   private detectCollisions(): void {
     const potentialCollisionsIndexes = SweepAndPrune(this.objects);
     potentialCollisionsIndexes.forEach((indexes) => {
