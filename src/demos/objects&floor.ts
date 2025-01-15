@@ -45,7 +45,7 @@ threeFiz.addBox({ mesh: floor, isStatic: true });
 // }
 
 let boxCount = 0;
-let sphereCount = 2;
+let sphereCount = 10;
 
 for (let i = 0; i < boxCount; i++) {
   const w = Math.random() * 10 + 5;
@@ -83,10 +83,10 @@ for (let i = 0; i < sphereCount; i++) {
   });
 }
 
-threeFiz.objects.forEach((obj) => {
-  obj.debug = new Debug(obj);
-  obj.debug.showAABB = { color: new THREE.Color("red") };
-});
+// threeFiz.objects.forEach((obj) => {
+//   obj.debug = new Debug(obj);
+//   obj.debug.showAABB = { color: new THREE.Color("red") };
+// });
 
 threeFiz.init();
 

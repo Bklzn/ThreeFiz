@@ -56,7 +56,8 @@ class ThreeFiz {
   init(): void {
     this.lastTicks = Date.now();
     this.world.updateObjects(this.objects, tree, 0);
-    console.log(tree.visualizeToString());
+    tree.visualize(this.scene);
+    console.log(tree.visualizeToString(), tree.root);
   }
 
   setGravity(gravity: Vector3): void {

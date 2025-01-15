@@ -1,9 +1,14 @@
-import { Box3 } from "three";
+import { Box3, Box3Helper, Color, Scene } from "three";
 import RigidBody from "./RigidBody";
 
+const DEFAULT_MARGIN = 5;
+
 const boxMerge = new Box3();
-const bodyToNode = new Map<RigidBody, Node>();
+const leafNodes = new Map<RigidBody, Node>();
 const freeNodes: Node[] = [];
+let n = 0;
+let m = 0;
+const helpers: Box3Helper[] = [];
 
 class Node {
   aabb: Box3;
@@ -12,6 +17,7 @@ class Node {
   left: Node | null = null;
   right: Node | null = null;
   object: RigidBody | null = null;
+  height: number = 0;
 
   constructor(aabb: Box3, object?: RigidBody, name?: string, parent?: Node) {
     this.aabb = aabb;
@@ -27,48 +33,46 @@ class Node {
 
 class AABBTree {
   root: Node | null;
+  nodes: Node[] = [];
+  margin: number;
 
-  constructor() {
+  constructor(margin: number = DEFAULT_MARGIN) {
     this.root = null;
+    this.margin = margin;
   }
 
   insert(object: RigidBody, name?: string): void {
     const aabb = object.aabb;
     const node = new Node(aabb, object, name);
-    bodyToNode.set(object, node);
+    this.nodes.push(node);
+    leafNodes.set(object, node);
     if (!this.root) {
       this.root = node;
       return;
     }
-    this.root = this.insertNode(node);
+    this.insertNode(node);
   }
 
-  private mergeAABBs(aabb1: Box3, aabb2: Box3, margin: number = 0): Box3 {
-    return new Box3().copy(aabb1).union(aabb2).expandByScalar(margin);
-  }
-
-  private insertNode(node: Node): Node {
+  private insertNode(node: Node): void {
     const bestLeaf = this.findBestLeaf(node);
-    const newParent = new Node(this.mergeAABBs(node.aabb, bestLeaf.aabb, 1));
-
-    const oldParent = bestLeaf.parent;
-    if (oldParent) {
-      if (oldParent.left === bestLeaf) {
-        oldParent.left = newParent;
-      } else {
-        oldParent.right = newParent;
-      }
-      newParent.parent = oldParent;
-    }
+    const newParent = new Node(new Box3().copy(node.aabb).union(bestLeaf.aabb));
 
     newParent.left = bestLeaf;
     newParent.right = node;
+
+    this.nodes.push(newParent);
+
+    const oldParent = bestLeaf.parent;
+    if (oldParent) {
+      newParent.parent = oldParent;
+      if (oldParent.left === bestLeaf) oldParent.left = newParent;
+      else oldParent.right = newParent;
+    } else this.root = newParent;
+
     bestLeaf.parent = newParent;
     node.parent = newParent;
 
     this.refitAncestors(newParent);
-
-    return oldParent || newParent;
   }
 
   private findBestLeaf(node: Node): Node {
@@ -100,7 +104,14 @@ class AABBTree {
     let current: Node | null = node;
     while (current !== null) {
       if (!current.isLeaf) {
-        current.aabb.copy(current.left!.aabb).union(current.right!.aabb);
+        if (current.left?.isLeaf || current.right?.isLeaf)
+          current.aabb
+            .copy(current.left!.aabb)
+            .union(current.right!.aabb)
+            .expandByScalar(this.margin);
+        else current.aabb.copy(current.left!.aabb).union(current.right!.aabb);
+        n = Math.max(current.left!.height, current.right!.height) + 1;
+        current.height = n;
       }
       current = current.parent;
     }
@@ -142,17 +153,19 @@ class AABBTree {
   }
 
   update(object: RigidBody): void {
-    const node = bodyToNode.get(object)!;
+    const node = leafNodes.get(object)!;
     if (node.parent!.aabb.containsBox(object.aabb)) {
       return; // No need to update if new AABB is contained in the old one
     }
-    // console.log("udpate", node.name);
-    this.removeNode(node);
+
+    this.removeLeaf(node);
     this.insertNode(node);
-    this.refitAncestors(node);
+    this.refitAncestors(node.parent!);
+
+    this.updateHelpers();
   }
 
-  private removeNode(node: Node): void {
+  private removeLeaf(node: Node): void {
     if (node === this.root) {
       this.root = null;
       return;
@@ -162,6 +175,8 @@ class AABBTree {
     const grandParent = parent.parent;
     const sibling = parent.left === node ? parent.right! : parent.left!;
 
+    this.nodes.splice(this.nodes.indexOf(parent), 1);
+
     if (grandParent) {
       if (grandParent.left === parent) {
         grandParent.left = sibling;
@@ -169,24 +184,59 @@ class AABBTree {
         grandParent.right = sibling;
       }
       sibling.parent = grandParent;
-
-      this.refitAncestors(grandParent);
     } else {
+      // parent is root
       this.root = sibling;
       sibling.parent = null;
     }
+    this.refitAncestors(sibling.parent!);
   }
 
-  visualizeToString(node: Node | null = this.root, depth: number = 0): string {
+  visualizeToString(node: Node | null = this.root): string {
     if (!node) return "";
-    const indent = "    ".repeat(depth);
-    const info = node.isLeaf ? `${node.name}` : depth < 1 ? "ROOT" : "[_box_]";
+    const indent = "  ".repeat(node.height);
+    const info = node.isLeaf
+      ? `${node.name}`
+      : node === this.root
+      ? "ROOT"
+      : "B";
 
-    const rightSubtree = this.visualizeToString(node.right, depth + 1);
+    const rightSubtree = this.visualizeToString(node.right);
+    const leftSubtree = this.visualizeToString(node.left);
 
-    const leftSubtree = this.visualizeToString(node.left, depth + 1);
+    return `${leftSubtree}${indent}${info}\n${rightSubtree}`;
+  }
 
-    return `${rightSubtree}${indent}${info}\n${leftSubtree}`;
+  visualize(
+    scene: Scene,
+    node: Node | null = this.root,
+    color: Color = new Color("blue"),
+    height: number = 0
+  ): void {
+    if (!node) return;
+    const helper = new Box3Helper(
+      node.isLeaf ? node.aabb : new Box3().copy(node.aabb),
+      color
+    );
+    helper.userData = { isLeaf: node.isLeaf };
+
+    scene.add(helper);
+    helpers.push(helper);
+
+    this.visualize(scene, node.right, color, height + 1);
+    this.visualize(scene, node.left, color, height + 1);
+  }
+
+  private updateHelpers(): void {
+    n = m = 0;
+    const parents = this.nodes.filter((n) => !n.isLeaf);
+    while (n < parents.length) {
+      if (!helpers[m].userData.isLeaf) {
+        helpers[m].box.copy(parents[n].aabb);
+        n++;
+      }
+      m++;
+    }
   }
 }
 
