@@ -6,6 +6,7 @@ const DEFAULT_MARGIN = 5;
 const boxMerge = new Box3();
 const leafNodes = new Map<RigidBody, Node>();
 const freeNodes: Node[] = [];
+const bestCostCandidates: Node[] = [];
 let n = 0;
 let m = 0;
 const helpers: Box3Helper[] = [];
@@ -76,45 +77,66 @@ class AABBTree {
   }
 
   private findBestLeaf(node: Node): Node {
-    let current = this.root!;
     let bestCost = Infinity;
-    let bestNode = null;
+    let bestNode = this.root!;
 
-    while (!current.isLeaf) {
-      const currentCost = this.calculateEnlargement(current.aabb, node.aabb);
+    bestCostCandidates.push(this.root!);
 
-      if (currentCost < bestCost) {
-        bestCost = currentCost;
+    while (bestCostCandidates.length > 0) {
+      const current = this.popBestNode(node);
+      if (!current) continue;
+
+      const directCost = this.calculateEnlargement(current.aabb, node.aabb);
+      const inheritanceCost = this.calculateInheritanceCost(current);
+      const totalCost = directCost + inheritanceCost;
+
+      if (current.isLeaf && totalCost < bestCost) {
+        bestCost = totalCost;
         bestNode = current;
       }
 
-      const leftCost = this.calculateEnlargement(current.left!.aabb, node.aabb);
-      const rightCost = this.calculateEnlargement(
-        current.right!.aabb,
-        node.aabb
-      );
+      if (!current.isLeaf && totalCost < bestCost) {
+        const leftCost =
+          this.calculateEnlargement(current.left!.aabb, node.aabb) +
+          this.calculateInheritanceCost(current.left!);
+        const rightCost =
+          this.calculateEnlargement(current.right!.aabb, node.aabb) +
+          this.calculateInheritanceCost(current.right!);
 
-      current = leftCost < rightCost ? current.left! : current.right!;
+        if (leftCost < bestCost) bestCostCandidates.push(current.left!);
+        if (rightCost < bestCost) bestCostCandidates.push(current.right!);
+      }
     }
 
-    return current;
+    return bestNode;
   }
 
-  private refitAncestors(node: Node): void {
-    let current: Node | null = node;
-    while (current !== null) {
-      if (!current.isLeaf) {
-        if (current.left?.isLeaf || current.right?.isLeaf)
-          current.aabb
-            .copy(current.left!.aabb)
-            .union(current.right!.aabb)
-            .expandByScalar(this.margin);
-        else current.aabb.copy(current.left!.aabb).union(current.right!.aabb);
-        n = Math.max(current.left!.height, current.right!.height) + 1;
-        current.height = n;
-      }
+  private popBestNode(node: Node): Node | null {
+    if (bestCostCandidates.length === 0) return null;
+    bestCostCandidates.sort(
+      (a, b) =>
+        this.calculateEnlargement(a.aabb, node.aabb) +
+        this.calculateInheritanceCost(a) -
+        this.calculateEnlargement(b.aabb, node.aabb) +
+        this.calculateInheritanceCost(b)
+    );
+
+    return bestCostCandidates.shift()!;
+  }
+
+  private calculateInheritanceCost(node: Node): number {
+    let cost = 0;
+    let current = node.parent;
+    let previousAabb = node.aabb;
+
+    while (current) {
+      const enlargement = this.calculateEnlargement(current.aabb, previousAabb);
+      cost += enlargement;
+      previousAabb = current.aabb;
       current = current.parent;
     }
+
+    return cost;
   }
 
   private calculateEnlargement(aabb1: Box3, aabb2: Box3): number {
@@ -129,6 +151,23 @@ class AABBTree {
     const dy = aabb.max.y - aabb.min.y;
     const dz = aabb.max.z - aabb.min.z;
     return 2 * (dx * dy + dy * dz + dx * dz);
+  }
+
+  private refitAncestors(node: Node): void {
+    let current: Node | null = node;
+    while (current !== null) {
+      if (!current.isLeaf) {
+        if (current.left?.isLeaf && current.right?.isLeaf)
+          current.aabb
+            .copy(current.left!.aabb)
+            .union(current.right!.aabb)
+            .expandByScalar(this.margin);
+        else current.aabb.copy(current.left!.aabb).union(current.right!.aabb);
+        n = Math.max(current.left!.height, current.right!.height) + 1;
+        current.height = n;
+      }
+      current = current.parent;
+    }
   }
 
   query(
@@ -153,7 +192,8 @@ class AABBTree {
   }
 
   update(object: RigidBody): void {
-    const node = leafNodes.get(object)!;
+    const node = leafNodes.get(object);
+    if (!node) return;
     if (node.parent!.aabb.containsBox(object.aabb)) {
       return; // No need to update if new AABB is contained in the old one
     }
@@ -192,19 +232,19 @@ class AABBTree {
     this.refitAncestors(sibling.parent!);
   }
 
-  visualizeToString(node: Node | null = this.root): string {
+  visualizeToString(node: Node | null = this.root, depth: number = 0): string {
     if (!node) return "";
-    const indent = "  ".repeat(node.height);
+    const indent = "  ".repeat(depth);
     const info = node.isLeaf
       ? `${node.name}`
       : node === this.root
       ? "ROOT"
       : "B";
 
-    const rightSubtree = this.visualizeToString(node.right);
-    const leftSubtree = this.visualizeToString(node.left);
+    const rightSubtree = this.visualizeToString(node.right, depth + 1);
+    const leftSubtree = this.visualizeToString(node.left, depth + 1);
 
-    return `${leftSubtree}${indent}${info}\n${rightSubtree}`;
+    return `${rightSubtree}${indent}${info}\n${leftSubtree}`;
   }
 
   visualize(
