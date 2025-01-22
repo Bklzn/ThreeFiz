@@ -1,14 +1,16 @@
-import { Box3, Box3Helper, Color, Scene } from "three";
+import { Box3, Box3Helper, Color, Scene, Vector3 } from "three";
 import RigidBody from "./RigidBody";
+import TinyQueue from "tinyqueue";
 
-const DEFAULT_MARGIN = 5;
+const DEFAULT_MARGIN = 10;
 
 const boxMerge = new Box3();
 const leafNodes = new Map<RigidBody, Node>();
 const freeNodes: Node[] = [];
-const bestCostCandidates: Node[] = [];
+const bestCostCandidates = new TinyQueue<Node>([], (a, b) => a.cost - b.cost);
 let n = 0;
 let m = 0;
+const tempVec = new Vector3();
 const helpers: Box3Helper[] = [];
 
 class Node {
@@ -19,16 +21,32 @@ class Node {
   right: Node | null = null;
   object: RigidBody | null = null;
   height: number = 0;
+  cost = Number.MAX_VALUE;
+  isLeaf = false;
+  surfaceArea = 0;
 
   constructor(aabb: Box3, object?: RigidBody, name?: string, parent?: Node) {
     this.aabb = aabb;
     this.name = name || null;
     this.parent = parent || null;
     this.object = object || null;
+    this.calculateSurfaceArea;
+  }
+  calculateSurfaceArea() {
+    tempVec.subVectors(this.aabb.max, this.aabb.min);
+    const { x, y, z } = tempVec;
+    this.surfaceArea = 2 * (x * y + y * z + x * z);
   }
 
-  get isLeaf(): boolean {
-    return !this.left && !this.right;
+  reset() {
+    this.parent = null;
+    this.left = null;
+    this.right = null;
+    this.object = null;
+    this.height = 0;
+    this.cost = Number.MAX_VALUE;
+    this.isLeaf = false;
+    this.surfaceArea = 0;
   }
 }
 
@@ -45,6 +63,7 @@ class AABBTree {
   insert(object: RigidBody, name?: string): void {
     const aabb = object.aabb;
     const node = new Node(aabb, object, name);
+    node.isLeaf = true;
     this.nodes.push(node);
     leafNodes.set(object, node);
     if (!this.root) {
@@ -56,7 +75,9 @@ class AABBTree {
 
   private insertNode(node: Node): void {
     const bestLeaf = this.findBestLeaf(node);
-    const newParent = new Node(new Box3().copy(node.aabb).union(bestLeaf.aabb));
+    let newParent = freeNodes.pop();
+    if (!newParent)
+      newParent = new Node(new Box3().copy(node.aabb).union(bestLeaf.aabb));
 
     newParent.left = bestLeaf;
     newParent.right = node;
@@ -83,45 +104,42 @@ class AABBTree {
     bestCostCandidates.push(this.root!);
 
     while (bestCostCandidates.length > 0) {
-      const current = this.popBestNode(node);
+      const current = this.popBestNode();
       if (!current) continue;
 
-      const directCost = this.calculateEnlargement(current.aabb, node.aabb);
+      const directCost = this.calculateEnlargement(current, node.aabb);
       const inheritanceCost = this.calculateInheritanceCost(current);
       const totalCost = directCost + inheritanceCost;
 
-      if (current.isLeaf && totalCost < bestCost) {
-        bestCost = totalCost;
-        bestNode = current;
-      }
+      if (totalCost < bestCost) {
+        if (current.isLeaf) {
+          bestCost = totalCost;
+          bestNode = current;
+        } else {
+          const leftCost = this.calculateCost(current.left!, node);
+          const rightCost = this.calculateCost(current.right!, node);
+          current.left!.cost = leftCost;
+          current.right!.cost = rightCost;
 
-      if (!current.isLeaf && totalCost < bestCost) {
-        const leftCost =
-          this.calculateEnlargement(current.left!.aabb, node.aabb) +
-          this.calculateInheritanceCost(current.left!);
-        const rightCost =
-          this.calculateEnlargement(current.right!.aabb, node.aabb) +
-          this.calculateInheritanceCost(current.right!);
-
-        if (leftCost < bestCost) bestCostCandidates.push(current.left!);
-        if (rightCost < bestCost) bestCostCandidates.push(current.right!);
+          if (leftCost < bestCost) bestCostCandidates.push(current.left!);
+          if (rightCost < bestCost) bestCostCandidates.push(current.right!);
+        }
       }
     }
 
     return bestNode;
   }
 
-  private popBestNode(node: Node): Node | null {
+  private popBestNode(): Node | null {
     if (bestCostCandidates.length === 0) return null;
-    bestCostCandidates.sort(
-      (a, b) =>
-        this.calculateEnlargement(a.aabb, node.aabb) +
-        this.calculateInheritanceCost(a) -
-        this.calculateEnlargement(b.aabb, node.aabb) +
-        this.calculateInheritanceCost(b)
-    );
+    return bestCostCandidates.pop()!;
+  }
 
-    return bestCostCandidates.shift()!;
+  private calculateCost(node1: Node, node2: Node) {
+    return (
+      this.calculateEnlargement(node1, node2.aabb) +
+      this.calculateInheritanceCost(node1)
+    );
   }
 
   private calculateInheritanceCost(node: Node): number {
@@ -130,7 +148,7 @@ class AABBTree {
     let previousAabb = node.aabb;
 
     while (current) {
-      const enlargement = this.calculateEnlargement(current.aabb, previousAabb);
+      const enlargement = this.calculateEnlargement(current, previousAabb);
       cost += enlargement;
       previousAabb = current.aabb;
       current = current.parent;
@@ -139,18 +157,16 @@ class AABBTree {
     return cost;
   }
 
-  private calculateEnlargement(aabb1: Box3, aabb2: Box3): number {
-    boxMerge.copy(aabb1).union(aabb2);
-    const area = this.calculateSurfaceArea(aabb1);
+  private calculateEnlargement(node: Node, aabb: Box3): number {
+    boxMerge.copy(node.aabb).union(aabb);
     const mergedArea = this.calculateSurfaceArea(boxMerge);
-    return mergedArea - area;
+    return mergedArea - node.surfaceArea;
   }
 
-  private calculateSurfaceArea(aabb: Box3): number {
-    const dx = aabb.max.x - aabb.min.x;
-    const dy = aabb.max.y - aabb.min.y;
-    const dz = aabb.max.z - aabb.min.z;
-    return 2 * (dx * dy + dy * dz + dx * dz);
+  calculateSurfaceArea(aabb: Box3): number {
+    tempVec.subVectors(aabb.max, aabb.min);
+    const { x, y, z } = tempVec;
+    return 2 * (x * y + y * z + x * z);
   }
 
   private refitAncestors(node: Node): void {
@@ -163,6 +179,7 @@ class AABBTree {
             .union(current.right!.aabb)
             .expandByScalar(this.margin);
         else current.aabb.copy(current.left!.aabb).union(current.right!.aabb);
+        current.calculateSurfaceArea();
         n = Math.max(current.left!.height, current.right!.height) + 1;
         current.height = n;
       }
@@ -170,27 +187,27 @@ class AABBTree {
     }
   }
 
-  query(
-    aabb: Box3,
-    results: RigidBody[],
-    node: Node | null = this.root!
-  ): RigidBody[] {
-    if (!node) return results;
-    console.log(node, aabb.intersectsBox(node.aabb));
-    if (node.isLeaf) {
-      console.log(node.aabb);
-    }
-    if (aabb.intersectsBox(node.aabb)) {
-      if (node.isLeaf && !aabb.equals(node.aabb)) {
-        results.push(node.object!);
-      } else {
-        this.query(aabb, results, node.left);
-        this.query(aabb, results, node.right);
+  query(aabb: Box3, results: RigidBody[]): RigidBody[] {
+    if (!this.root) return results;
+
+    const stack: Node[] = [this.root];
+    let stackIndex = 1;
+
+    while (stackIndex > 0) {
+      const node = stack[--stackIndex];
+
+      if (aabb.intersectsBox(node.aabb)) {
+        if (node.isLeaf && !aabb.equals(node.aabb)) {
+          results.push(node.object!);
+        } else if (node.left && node.right) {
+          stack[stackIndex++] = node.right;
+          stack[stackIndex++] = node.left;
+        }
       }
     }
+
     return results;
   }
-
   update(object: RigidBody): void {
     const node = leafNodes.get(object);
     if (!node) return;
@@ -215,7 +232,11 @@ class AABBTree {
     const grandParent = parent.parent;
     const sibling = parent.left === node ? parent.right! : parent.left!;
 
-    this.nodes.splice(this.nodes.indexOf(parent), 1);
+    this.nodes[this.nodes.indexOf(parent)] = this.nodes[this.nodes.length - 1];
+    this.nodes.pop();
+
+    freeNodes.push(parent);
+    parent.reset();
 
     if (grandParent) {
       if (grandParent.left === parent) {
@@ -268,14 +289,16 @@ class AABBTree {
   }
 
   private updateHelpers(): void {
-    n = m = 0;
-    const parents = this.nodes.filter((n) => !n.isLeaf);
-    while (n < parents.length) {
-      if (!helpers[m].userData.isLeaf) {
-        helpers[m].box.copy(parents[n].aabb);
-        n++;
+    if (helpers.length) {
+      n = m = 0;
+      const parents = this.nodes.filter((n) => !n.isLeaf);
+      while (n < parents.length) {
+        if (!helpers[m].userData.isLeaf) {
+          helpers[m].box.copy(parents[n].aabb);
+          n++;
+        }
+        m++;
       }
-      m++;
     }
   }
 }

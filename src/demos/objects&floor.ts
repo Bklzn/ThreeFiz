@@ -45,7 +45,7 @@ threeFiz.addBox({ mesh: floor, isStatic: true });
 // }
 
 let boxCount = 0;
-let sphereCount = 10;
+let sphereCount = 450;
 
 for (let i = 0; i < boxCount; i++) {
   const w = Math.random() * 10 + 5;

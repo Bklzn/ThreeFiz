@@ -56,8 +56,6 @@ class ThreeFiz {
   init(): void {
     this.lastTicks = Date.now();
     this.world.updateObjects(this.objects, tree, 0);
-    tree.visualize(this.scene);
-    console.log(tree.visualizeToString(), tree.root);
   }
 
   setGravity(gravity: Vector3): void {
@@ -66,7 +64,6 @@ class ThreeFiz {
 
   private update(dT: number): void {
     this.world.updateObjects(this.objects, tree, dT);
-    console.log(tree.visualizeToString());
     this.detectCollisions();
   }
 
@@ -80,16 +77,35 @@ class ThreeFiz {
   onCollision(_object1: RigidBody, _object2: RigidBody): void {}
 
   private detectCollisions(): void {
-    const potentialCollisionsIndexes = SweepAndPrune(this.objects);
-    potentialCollisionsIndexes.forEach((indexes) => {
-      const objA = this.objects[indexes[0]];
-      const objB = this.objects[indexes[1]];
-      if (!objA.isStatic || !objB.isStatic)
-        if (objA.intersects(objB)) {
-          objA.resolveCollision(objB);
-          this.onCollision(objA, objB);
-        }
+    const resolved: Map<RigidBody, RigidBody[]> = new Map();
+    this.objects.forEach((objA) => {
+      const potentialCollisions: RigidBody[] = [];
+      tree.query(objA.aabb, potentialCollisions);
+      potentialCollisions.forEach((objB) => {
+        if (!objA.isStatic || !objB.isStatic)
+          if (
+            objA.intersects(objB) &&
+            (!resolved.get(objB) || !resolved.get(objB)!.includes(objA))
+          ) {
+            objA.resolveCollision(objB);
+            this.onCollision(objA, objB);
+            if (!resolved.has(objA)) {
+              resolved.set(objA, []);
+            }
+            resolved.get(objA)!.push(objB);
+          }
+      });
     });
+    // const potentialCollisionsIndexes = SweepAndPrune(this.objects);
+    // potentialCollisionsIndexes.forEach((indexes) => {
+    //   const objA = this.objects[indexes[0]];
+    //   const objB = this.objects[indexes[1]];
+    //   if (!objA.isStatic || !objB.isStatic)
+    //     if (objA.intersects(objB)) {
+    //       objA.resolveCollision(objB);
+    //       this.onCollision(objA, objB);
+    //     }
+    // });
   }
 
   visibilityChange = () => {
