@@ -20,7 +20,7 @@ class World {
   }
 
   updateObjects(objects: RigidBody[], AABBTree: AABBTree, dT: number): void {
-    objects.forEach((object) => {
+    objects.forEach((object, id) => {
       if (!object.isStatic) object.needsUpdate = true;
       if (object.needsUpdate) {
         this.applyGravity(object, dT);
@@ -30,7 +30,7 @@ class World {
         object.mesh.updateMatrixWorld();
         object.updateAABB();
         object.updateCollider();
-        AABBTree.update(object);
+        AABBTree.update(id, object.aabb);
         object.needsUpdate = false;
       }
       object.debug.update();

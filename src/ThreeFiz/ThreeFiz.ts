@@ -37,8 +37,9 @@ class ThreeFiz {
     this.objects.push(newObject);
     this.scene.add(newObject.mesh);
     tree.insert(
-      newObject,
-      `${newObject.constructor.name}${this.objects.length}`
+      newObject.aabb,
+      this.objects.length - 1,
+      `${newObject.constructor.name}${this.objects.length - 1}`
     );
     newObject.mesh.position.copy(newObject.getPosition(v));
   }
@@ -47,8 +48,9 @@ class ThreeFiz {
     const newObject = new Sphere(object);
     this.objects.push(newObject);
     tree.insert(
-      newObject,
-      `${newObject.constructor.name}${this.objects.length}`
+      newObject.aabb,
+      this.objects.length - 1,
+      `${newObject.constructor.name}${this.objects.length - 1}`
     );
     this.scene.add(newObject.mesh);
   }
@@ -79,10 +81,10 @@ class ThreeFiz {
   private detectCollisions(): void {
     const resolved: Map<RigidBody, RigidBody[]> = new Map();
     this.objects.forEach((objA) => {
-      const potentialCollisions: RigidBody[] = [];
-      tree.query(objA.aabb, potentialCollisions);
-      potentialCollisions.forEach((objB) => {
-        if (!objA.isStatic || !objB.isStatic)
+      if (!objA.isStatic) {
+        const potentialCollisions = tree.query(objA.aabb);
+        potentialCollisions.forEach((j) => {
+          const objB = this.objects[j];
           if (
             objA.intersects(objB) &&
             (!resolved.get(objB) || !resolved.get(objB)!.includes(objA))
@@ -94,7 +96,8 @@ class ThreeFiz {
             }
             resolved.get(objA)!.push(objB);
           }
-      });
+        });
+      }
     });
     // const potentialCollisionsIndexes = SweepAndPrune(this.objects);
     // potentialCollisionsIndexes.forEach((indexes) => {
