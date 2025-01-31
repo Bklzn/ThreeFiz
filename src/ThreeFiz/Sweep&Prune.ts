@@ -1,3 +1,4 @@
+import TinyQueue from "tinyqueue";
 import RigidBody from "./RigidBody";
 
 interface EndPoint {
@@ -6,52 +7,84 @@ interface EndPoint {
   index: number;
 }
 
-const SweepAndPrune = (objects: RigidBody[]) => {
-  const potentialCollisionsOnX_Indexes = new Set<number[]>();
-  const potentialCollisionsIndexes = new Set<number[]>();
-  const sortedObjects = sortByXAxis(objects);
-  const activeIndex = new Set<number>();
-  for (const obj of sortedObjects) {
-    if (obj.isStart) {
-      for (const id of activeIndex) {
-        potentialCollisionsOnX_Indexes.add([
-          Math.min(id, obj.index),
-          Math.max(id, obj.index),
-        ]);
-      }
-      activeIndex.add(obj.index);
-    } else activeIndex.delete(obj.index);
+const endpoints: TinyQueue<EndPoint> = new TinyQueue<EndPoint>(
+  [],
+  (a: EndPoint, b: EndPoint) => a.value - b.value
+);
+const sortArr: { body: RigidBody; id: number }[] = [];
+let activeIndex: number[] = [];
+let activeHost = false;
+const collisionsIndexes: number[][] = [];
+let PAIRS_POOL: number[][] = [];
+let PAIRS_POOL_INIT = false;
+let pairsPoolIndex = 0;
+
+const getMaxPairsCount = (n: number) => n - 1;
+
+const SweepAndPrune = (
+  objects: RigidBody[],
+  hostID: number,
+  others: number[]
+) => {
+  if (!PAIRS_POOL_INIT) {
+    const maxPairs = getMaxPairsCount(objects.length);
+    PAIRS_POOL = Array(maxPairs)
+      .fill(null)
+      .map(() => [hostID, 0]);
+    activeIndex = Array(maxPairs).fill(-1);
+    PAIRS_POOL_INIT = true;
   }
 
-  for (const pair of potentialCollisionsOnX_Indexes) {
-    const [i, j] = pair;
-    if (checkYAxisCollision(objects[i], objects[j])) {
-      potentialCollisionsIndexes.add(pair);
+  collisionsIndexes.length = 0;
+  pairsPoolIndex = 0;
+
+  sortArr.push({ body: objects[hostID], id: hostID });
+  for (const i of others) {
+    sortArr.push({ body: objects[i], id: i });
+  }
+
+  sortByXAxis(sortArr);
+  activeHost = false;
+
+  while (endpoints.data.length > 0) {
+    const obj = endpoints.pop();
+    if (!obj) continue;
+    if (obj.isStart) {
+      if (obj.index === hostID) activeHost = true;
+      else activeIndex[obj.index] = obj.index;
+    } else {
+      if (obj.index === hostID) break;
+      if (!activeHost) activeIndex[obj.index] = -1;
     }
   }
 
-  return Array.from(potentialCollisionsIndexes).map((pair) => [
-    pair[0],
-    pair[1],
-  ]);
-};
-
-const sortByXAxis = (objects: RigidBody[]) => {
-  const endpoints: EndPoint[] = [];
-
-  for (let i = 0; i < objects.length; i++) {
-    const obj = objects[i];
-    endpoints.push({ isStart: true, value: obj.aabb.min.x, index: i });
-    endpoints.push({ isStart: false, value: obj.aabb.max.x, index: i });
+  while (others.length > 0) {
+    const id = others.pop();
+    if (!id) continue;
+    if (activeIndex[id] === -1) continue;
+    const pair = PAIRS_POOL[pairsPoolIndex++];
+    pair[0] = hostID;
+    pair[1] = activeIndex[id];
+    collisionsIndexes.push(pair);
   }
 
-  return endpoints.sort((a, b) => a.value - b.value);
+  return collisionsIndexes;
 };
 
-const checkYAxisCollision = (obj1: RigidBody, obj2: RigidBody) => {
-  return (
-    obj1.aabb.min.y <= obj2.aabb.max.y && obj1.aabb.max.y >= obj2.aabb.min.y
-  );
+const sortByXAxis = (arr: typeof sortArr) => {
+  for (const obj of arr) {
+    endpoints.push({
+      isStart: true,
+      value: obj.body.aabb.min.x,
+      index: obj.id,
+    });
+    endpoints.push({
+      isStart: false,
+      value: obj.body.aabb.max.x,
+      index: obj.id,
+    });
+  }
+  arr.length = 0;
 };
 
 export default SweepAndPrune;

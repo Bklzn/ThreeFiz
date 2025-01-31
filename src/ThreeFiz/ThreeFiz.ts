@@ -79,36 +79,40 @@ class ThreeFiz {
   onCollision(_object1: RigidBody, _object2: RigidBody): void {}
 
   private detectCollisions(): void {
-    const resolved: Map<RigidBody, RigidBody[]> = new Map();
-    this.objects.forEach((objA) => {
-      if (!objA.isStatic) {
-        const potentialCollisions = tree.query(objA.aabb);
-        potentialCollisions.forEach((j) => {
-          const objB = this.objects[j];
+    const potentialCollisionsIndexes_tree: Map<number, number[]> = new Map();
+    this.objects.forEach((objA, idx) => {
+      const potentialCollisions = tree.query(objA.aabb);
+      potentialCollisions.forEach((j) => {
+        const objB = this.objects[j];
+        if (!objA.isStatic || !objB.isStatic)
           if (
-            objA.intersects(objB) &&
-            (!resolved.get(objB) || !resolved.get(objB)!.includes(objA))
+            !potentialCollisionsIndexes_tree.has(j) ||
+            !potentialCollisionsIndexes_tree.get(j)!.includes(idx)
           ) {
+            // if (objA.intersects(objB)) {
+            //   objA.resolveCollision(objB);
+            //   this.onCollision(objA, objB);
+            // }
+            if (!potentialCollisionsIndexes_tree.has(idx))
+              potentialCollisionsIndexes_tree.set(idx, []);
+            potentialCollisionsIndexes_tree.get(idx)!.push(j);
+          }
+      });
+    });
+
+    potentialCollisionsIndexes_tree.forEach((v, k) => {
+      const potentialCollisionsIndexes_SAP = SweepAndPrune(this.objects, k, v);
+
+      potentialCollisionsIndexes_SAP.forEach((indexes) => {
+        const objA = this.objects[indexes[0]];
+        const objB = this.objects[indexes[1]];
+        if (!objA.isStatic || !objB.isStatic)
+          if (objA.intersects(objB)) {
             objA.resolveCollision(objB);
             this.onCollision(objA, objB);
-            if (!resolved.has(objA)) {
-              resolved.set(objA, []);
-            }
-            resolved.get(objA)!.push(objB);
           }
-        });
-      }
+      });
     });
-    // const potentialCollisionsIndexes = SweepAndPrune(this.objects);
-    // potentialCollisionsIndexes.forEach((indexes) => {
-    //   const objA = this.objects[indexes[0]];
-    //   const objB = this.objects[indexes[1]];
-    //   if (!objA.isStatic || !objB.isStatic)
-    //     if (objA.intersects(objB)) {
-    //       objA.resolveCollision(objB);
-    //       this.onCollision(objA, objB);
-    //     }
-    // });
   }
 
   visibilityChange = () => {
