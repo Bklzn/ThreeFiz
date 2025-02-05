@@ -11,32 +11,30 @@ const endpoints: TinyQueue<EndPoint> = new TinyQueue<EndPoint>(
   [],
   (a: EndPoint, b: EndPoint) => a.value - b.value
 );
+let objects: RigidBody[] = [];
 const sortArr: { body: RigidBody; id: number }[] = [];
 let activeIndex: number[] = [];
 let activeHost = false;
 const collisionsIndexes: number[][] = [];
 let PAIRS_POOL: number[][] = [];
-let PAIRS_POOL_INIT = false;
 let pairsPoolIndex = 0;
 
 const getMaxPairsCount = (n: number) => n - 1;
 
-const SweepAndPrune = (
-  objects: RigidBody[],
-  hostID: number,
-  others: number[]
-) => {
-  if (!PAIRS_POOL_INIT) {
-    const maxPairs = getMaxPairsCount(objects.length);
-    PAIRS_POOL = Array(maxPairs)
-      .fill(null)
-      .map(() => [hostID, 0]);
-    activeIndex = Array(maxPairs).fill(-1);
-    PAIRS_POOL_INIT = true;
-  }
+export const init = (objs: RigidBody[]) => {
+  objects.push(...objs);
+  const maxPairs = getMaxPairsCount(objects.length);
+  PAIRS_POOL = Array(maxPairs)
+    .fill(null)
+    .map(() => [0, 0]);
+  activeIndex = Array(maxPairs).fill(-1);
+};
 
+const SweepAndPrune = (hostID: number, others: number[]) => {
   collisionsIndexes.length = 0;
   pairsPoolIndex = 0;
+  endpoints.length = 0;
+  endpoints.data.length = 0;
 
   sortArr.push({ body: objects[hostID], id: hostID });
   for (const i of others) {

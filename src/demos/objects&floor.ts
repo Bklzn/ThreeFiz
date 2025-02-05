@@ -45,7 +45,7 @@ threeFiz.addBox({ mesh: floor, isStatic: true });
 // }
 
 let boxCount = 0;
-let sphereCount = 500;
+let sphereCount = 300;
 
 for (let i = 0; i < boxCount; i++) {
   const w = Math.random() * 10 + 5;
@@ -81,7 +81,7 @@ for (let i = 0; i < sphereCount; i++) {
     mesh: sphere,
     position: new THREE.Vector3(
       Math.random() * 200 - 100,
-      50,
+      15,
       Math.random() * 200 - 100
     ),
   });

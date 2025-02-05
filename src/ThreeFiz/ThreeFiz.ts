@@ -3,7 +3,7 @@ import { Scene, Vector3 } from "three";
 import World from "./World";
 import RigidBody, { RigidBodyProps } from "./RigidBody";
 import Sphere from "./Sphere";
-import SweepAndPrune from "./Sweep&Prune";
+import SweepAndPrune, { init as SAPinit } from "./Sweep&Prune";
 import AABBTree from "./AABBTree";
 
 const v = new Vector3();
@@ -58,6 +58,7 @@ class ThreeFiz {
   init(): void {
     this.lastTicks = Date.now();
     this.world.updateObjects(this.objects, tree, 0);
+    SAPinit(this.objects);
   }
 
   setGravity(gravity: Vector3): void {
@@ -89,10 +90,6 @@ class ThreeFiz {
             !potentialCollisionsIndexes_tree.has(j) ||
             !potentialCollisionsIndexes_tree.get(j)!.includes(idx)
           ) {
-            // if (objA.intersects(objB)) {
-            //   objA.resolveCollision(objB);
-            //   this.onCollision(objA, objB);
-            // }
             if (!potentialCollisionsIndexes_tree.has(idx))
               potentialCollisionsIndexes_tree.set(idx, []);
             potentialCollisionsIndexes_tree.get(idx)!.push(j);
@@ -101,7 +98,7 @@ class ThreeFiz {
     });
 
     potentialCollisionsIndexes_tree.forEach((v, k) => {
-      const potentialCollisionsIndexes_SAP = SweepAndPrune(this.objects, k, v);
+      const potentialCollisionsIndexes_SAP = SweepAndPrune(k, v);
 
       potentialCollisionsIndexes_SAP.forEach((indexes) => {
         const objA = this.objects[indexes[0]];
