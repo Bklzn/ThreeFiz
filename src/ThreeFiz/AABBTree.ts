@@ -1,7 +1,7 @@
 import { Box3, Box3Helper, Color, Scene, Vector3 } from "three";
 import TinyQueue from "tinyqueue";
 
-const DEFAULT_MARGIN = 3;
+const DEFAULT_MARGIN = 1;
 
 const boxMerge = new Box3();
 const leafNodes = new Map<number, Node>();
@@ -12,6 +12,11 @@ let n = 0;
 let m = 0;
 const tempVec = new Vector3();
 const helpers: Box3Helper[] = [];
+let RESULTS_LENGTH = 0;
+let RESULTS: Uint16Array<ArrayBuffer>;
+let RESULTS_COUNT = 0;
+let STACK: Node[];
+let STACK_INDEX = 0;
 
 const calculateSurfaceArea = (aabb: Box3): number => {
   tempVec.subVectors(aabb.max, aabb.min);
@@ -47,9 +52,7 @@ class Node {
     this.calculateSurfaceArea();
   }
   calculateSurfaceArea() {
-    tempVec.subVectors(this.aabb.max, this.aabb.min);
-    const { x, y, z } = tempVec;
-    this.surfaceArea = 2 * (x * y + y * z + x * z);
+    this.surfaceArea = calculateSurfaceArea(this.aabb);
   }
 
   calculateAABB(margin: number): void {
@@ -59,8 +62,6 @@ class Node {
         .union(this.right!.aabb)
         .expandByScalar(margin);
     else this.aabb.copy(this.left!.aabb).union(this.right!.aabb);
-
-    this.calculateSurfaceArea();
 
     n = Math.max(this.left!.height, this.right!.height) + 1;
     this.height = n;
@@ -92,19 +93,27 @@ class AABBTree {
     this.margin = margin;
   }
 
+  init() {
+    RESULTS = new Uint16Array(RESULTS_LENGTH);
+    STACK = new Array(Math.ceil(2 * Math.log2(RESULTS_LENGTH) + 1));
+  }
+
   insert(aabb: Box3, objectID: number, name?: string): void {
     const node = new Node(aabb, objectID, name);
+    RESULTS_LENGTH++;
     node.isLeaf = true;
     this.nodes.push(node);
     leafNodes.set(objectID, node);
+    this.insertNode(node);
+    this.refitAncestors(node);
+  }
+
+  private insertNode(node: Node): void {
     if (!this.root) {
       this.root = node;
       return;
     }
-    this.insertNode(node);
-  }
 
-  private insertNode(node: Node): void {
     const bestLeaf = this.findBestLeaf(node);
     let newParent = freeNodes.pop();
     if (!newParent)
@@ -124,21 +133,19 @@ class AABBTree {
 
     bestLeaf.parent = newParent;
     node.parent = newParent;
-
-    this.refitAncestors(newParent);
   }
 
   private findBestLeaf(node: Node): Node {
-    let bestCost = Infinity;
+    let bestCost = Number.MAX_VALUE;
     let bestNode = this.root!;
 
-    this.root!.cost = calculateEnlargement(this.root!, node.aabb);
-    bestCostCandidates.push(this.root!);
+    // this.root!.cost = this.root?.surfaceArea ?? bestCost;
+    this.root!.cost = calculateEnlargement(bestNode, node.aabb);
+    bestCostCandidates.push(bestNode);
 
     while (bestCostCandidates.length) {
       const current = this.popBestNode();
       const totalCost = current.cost;
-
       if (totalCost < bestCost) {
         if (current.isLeaf) {
           bestCost = totalCost;
@@ -150,7 +157,7 @@ class AABBTree {
           current.right!.cost = rightCost;
 
           if (leftCost < bestCost) bestCostCandidates.push(current.left!);
-          if (rightCost < leftCost) bestCostCandidates.push(current.right!);
+          if (rightCost < bestCost) bestCostCandidates.push(current.right!);
         }
       }
     }
@@ -181,12 +188,11 @@ class AABBTree {
     let cost = 0;
     let child = node;
     let current = node.parent;
+    let enlargement = 0;
 
     while (current) {
-      const enlargement =
-        child == current.left
-          ? current.leftEnlargement
-          : current.rightEnlargement;
+      enlargement = current.rightEnlargement;
+      if (child == current.left) enlargement = current.leftEnlargement;
       cost += enlargement;
       child = current;
       current = current.parent;
@@ -195,10 +201,7 @@ class AABBTree {
     return cost;
   }
 
-  private refitAncestors(
-    node: Node,
-    callback?: (node: Node, box: Box3) => void
-  ): void {
+  private refitAncestors(node: Node): void {
     let current: Node | null = node;
     let childAABB = current.aabb;
 
@@ -206,34 +209,37 @@ class AABBTree {
       if (!current.isLeaf) {
         current.calculateAABB(this.margin);
 
-        callback && callback(current, childAABB);
+        current.calculateEnlargement(childAABB);
       }
+      current.calculateSurfaceArea();
+
       childAABB = current.aabb;
       current = current.parent;
     }
   }
 
-  query(aabb: Box3): number[] {
-    const results: number[] = [];
-    if (!this.root) return results;
+  query(aabb: Box3): Uint16Array<ArrayBuffer> {
+    RESULTS_COUNT = 0;
+    if (!this.root) return RESULTS;
+    STACK[0] = this.root;
+    STACK_INDEX = 1;
 
-    const stack: Node[] = [this.root];
-    let stackIndex = 1;
-
-    while (stackIndex > 0) {
-      const node = stack[--stackIndex];
+    let node: Node;
+    while (STACK_INDEX > 0) {
+      node = STACK[--STACK_INDEX];
 
       if (aabb.intersectsBox(node.aabb)) {
-        if (node.isLeaf && !aabb.equals(node.aabb)) {
-          results.push(node.objectID!);
-        } else if (node.left && node.right) {
-          stack[stackIndex++] = node.right;
-          stack[stackIndex++] = node.left;
+        if (node.isLeaf) {
+          if (!aabb.equals(node.aabb))
+            RESULTS[RESULTS_COUNT++] = node.objectID!;
+        } else {
+          STACK[STACK_INDEX++] = node.left!;
+          STACK[STACK_INDEX++] = node.right!;
         }
       }
     }
 
-    return results;
+    return RESULTS.slice(0, RESULTS_COUNT);
   }
 
   update(objectID: number, aabb: Box3): void {
@@ -245,7 +251,7 @@ class AABBTree {
 
     this.removeLeaf(node);
     this.insertNode(node);
-    this.refitAncestors(node, (n, b) => n.calculateEnlargement(b));
+    this.refitAncestors(node);
 
     this.updateHelpers();
   }
@@ -299,8 +305,7 @@ class AABBTree {
   visualize(
     scene: Scene,
     node: Node | null = this.root,
-    color: Color = new Color("blue"),
-    height: number = 0
+    color: Color = new Color("blue")
   ): void {
     if (!node) return;
     const helper = new Box3Helper(
@@ -312,8 +317,8 @@ class AABBTree {
     scene.add(helper);
     helpers.push(helper);
 
-    this.visualize(scene, node.right, color, height + 1);
-    this.visualize(scene, node.left, color, height + 1);
+    this.visualize(scene, node.right, color);
+    this.visualize(scene, node.left, color);
   }
 
   private updateHelpers(): void {
