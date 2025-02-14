@@ -1,91 +1,29 @@
-import { Box3, Box3Helper, Color, Scene, Vector3 } from "three";
+import { Box3, Box3Helper, Color, Scene } from "three";
 import TinyQueue from "tinyqueue";
+import AABBNode from "./AABBNode";
+import { calculateEnlargement } from "./utils";
 
 const DEFAULT_MARGIN = 1;
 
-const boxMerge = new Box3();
-const leafNodes = new Map<number, Node>();
-const freeNodes: Node[] = [];
-const costResetNodes: Node[] = [];
-const bestCostCandidates = new TinyQueue<Node>([], (a, b) => a.cost - b.cost);
+const leafNodes = new Map<number, AABBNode>();
+const freeNodes: AABBNode[] = [];
+const costResetNodes: AABBNode[] = [];
+const bestCostCandidates = new TinyQueue<AABBNode>(
+  [],
+  (a, b) => a.cost - b.cost
+);
 let n = 0;
 let m = 0;
-const tempVec = new Vector3();
 const helpers: Box3Helper[] = [];
 let RESULTS_LENGTH = 0;
 let RESULTS: Uint16Array<ArrayBuffer>;
 let RESULTS_COUNT = 0;
-let STACK: Node[];
+let STACK: AABBNode[];
 let STACK_INDEX = 0;
 
-const calculateSurfaceArea = (aabb: Box3): number => {
-  tempVec.subVectors(aabb.max, aabb.min);
-  const { x, y, z } = tempVec;
-  return 2 * (x * y + y * z + x * z);
-};
-
-const calculateEnlargement = (node: Node, aabb: Box3): number => {
-  boxMerge.copy(node.aabb).union(aabb);
-  const mergedArea = calculateSurfaceArea(boxMerge);
-  return mergedArea - node.surfaceArea;
-};
-
-class Node {
-  aabb: Box3;
-  name: string | null = null;
-  parent: Node | null = null;
-  left: Node | null = null;
-  leftEnlargement = 0;
-  rightEnlargement = 0;
-  right: Node | null = null;
-  objectID: number | null = null;
-  height: number = 0;
-  cost = -1;
-  isLeaf = false;
-  surfaceArea = 0;
-
-  constructor(aabb: Box3, objectID?: number, name?: string, parent?: Node) {
-    this.aabb = aabb;
-    this.name = name ?? null;
-    this.parent = parent ?? null;
-    this.objectID = objectID ?? null;
-    this.calculateSurfaceArea();
-  }
-  calculateSurfaceArea() {
-    this.surfaceArea = calculateSurfaceArea(this.aabb);
-  }
-
-  calculateAABB(margin: number): void {
-    if (this.left!.isLeaf && this.right!.isLeaf)
-      this.aabb
-        .copy(this.left!.aabb)
-        .union(this.right!.aabb)
-        .expandByScalar(margin);
-    else this.aabb.copy(this.left!.aabb).union(this.right!.aabb);
-
-    n = Math.max(this.left!.height, this.right!.height) + 1;
-    this.height = n;
-  }
-
-  calculateEnlargement(childBox: Box3): void {
-    const enlargement = calculateEnlargement(this, childBox);
-    if (childBox === this.left!.aabb) this.leftEnlargement = enlargement;
-    else this.rightEnlargement = enlargement;
-  }
-
-  reset() {
-    this.parent = null;
-    this.left = null;
-    this.right = null;
-    this.height = 0;
-    this.cost = -1;
-    this.surfaceArea = 0;
-  }
-}
-
 class AABBTree {
-  root: Node | null;
-  nodes: Node[] = [];
+  root: AABBNode | null;
+  nodes: AABBNode[] = [];
   margin: number;
 
   constructor(margin: number = DEFAULT_MARGIN) {
@@ -99,7 +37,7 @@ class AABBTree {
   }
 
   insert(aabb: Box3, objectID: number, name?: string): void {
-    const node = new Node(aabb, objectID, name);
+    const node = new AABBNode(aabb, objectID, name);
     RESULTS_LENGTH++;
     node.isLeaf = true;
     this.nodes.push(node);
@@ -108,7 +46,7 @@ class AABBTree {
     this.refitAncestors(node);
   }
 
-  private insertNode(node: Node): void {
+  private insertNode(node: AABBNode): void {
     if (!this.root) {
       this.root = node;
       return;
@@ -117,7 +55,7 @@ class AABBTree {
     const bestLeaf = this.findBestLeaf(node);
     let newParent = freeNodes.pop();
     if (!newParent)
-      newParent = new Node(new Box3().copy(node.aabb).union(bestLeaf.aabb));
+      newParent = new AABBNode(new Box3().copy(node.aabb).union(bestLeaf.aabb));
 
     newParent.left = bestLeaf;
     newParent.right = node;
@@ -135,7 +73,7 @@ class AABBTree {
     node.parent = newParent;
   }
 
-  private findBestLeaf(node: Node): Node {
+  private findBestLeaf(node: AABBNode): AABBNode {
     let bestCost = Number.MAX_VALUE;
     let bestNode = this.root!;
 
@@ -165,7 +103,7 @@ class AABBTree {
     return bestNode;
   }
 
-  private popBestNode(): Node {
+  private popBestNode(): AABBNode {
     const node = bestCostCandidates.pop()!;
     costResetNodes.push(node);
     return node;
@@ -177,14 +115,14 @@ class AABBTree {
     }
   }
 
-  private calculateCost(node1: Node, node2: Node) {
+  private calculateCost(node1: AABBNode, node2: AABBNode) {
     return (
       calculateEnlargement(node1, node2.aabb) +
       this.calculateInheritanceCost(node1)
     );
   }
 
-  private calculateInheritanceCost(node: Node): number {
+  private calculateInheritanceCost(node: AABBNode): number {
     let cost = 0;
     let child = node;
     let current = node.parent;
@@ -201,8 +139,8 @@ class AABBTree {
     return cost;
   }
 
-  private refitAncestors(node: Node): void {
-    let current: Node | null = node;
+  private refitAncestors(node: AABBNode): void {
+    let current: AABBNode | null = node;
     let childAABB = current.aabb;
 
     while (current !== null) {
@@ -224,7 +162,7 @@ class AABBTree {
     STACK[0] = this.root;
     STACK_INDEX = 1;
 
-    let node: Node;
+    let node: AABBNode;
     while (STACK_INDEX > 0) {
       node = STACK[--STACK_INDEX];
 
@@ -256,7 +194,7 @@ class AABBTree {
     this.updateHelpers();
   }
 
-  private removeLeaf(node: Node): void {
+  private removeLeaf(node: AABBNode): void {
     if (node === this.root) {
       this.root = null;
       return;
@@ -287,7 +225,10 @@ class AABBTree {
     }
   }
 
-  visualizeToString(node: Node | null = this.root, depth: number = 0): string {
+  visualizeToString(
+    node: AABBNode | null = this.root,
+    depth: number = 0
+  ): string {
     if (!node) return "";
     const indent = "  ".repeat(depth);
     const info = node.isLeaf
@@ -304,7 +245,7 @@ class AABBTree {
 
   visualize(
     scene: Scene,
-    node: Node | null = this.root,
+    node: AABBNode | null = this.root,
     color: Color = new Color("blue")
   ): void {
     if (!node) return;
