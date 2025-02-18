@@ -1,24 +1,24 @@
-import { Box3, Box3Helper, Color, Scene } from "three";
+import { Box3, Box3Helper, Color, Scene, Vector3 } from "three";
 import TinyQueue from "tinyqueue";
 import AABBNode from "./AABBNode";
 import { calculateEnlargement } from "./utils";
 
 const DEFAULT_MARGIN = 1;
 
-const leafNodes = new Map<number, AABBNode>();
+const leafNodes: AABBNode[] = [];
 const freeNodes: AABBNode[] = [];
 const costResetNodes: AABBNode[] = [];
 const bestCostCandidates = new TinyQueue<AABBNode>(
   [],
   (a, b) => a.cost - b.cost
 );
+const b = new Box3();
+const v = new Vector3();
 let n = 0;
 let m = 0;
 const helpers: Box3Helper[] = [];
-let RESULTS_LENGTH = 0;
-let RESULTS: Uint16Array<ArrayBuffer>;
 let RESULTS_COUNT = 0;
-let STACK: AABBNode[];
+const STACK: AABBNode[] = new Array<AABBNode>(126);
 let STACK_INDEX = 0;
 
 class AABBTree {
@@ -32,18 +32,16 @@ class AABBTree {
   }
 
   init() {
-    RESULTS = new Uint16Array(RESULTS_LENGTH);
-    STACK = new Array(Math.ceil(2 * Math.log2(RESULTS_LENGTH) + 1));
+    this.root = this.balance(this.root!);
   }
 
   insert(aabb: Box3, objectID: number, name?: string): void {
     const node = new AABBNode(aabb, objectID, name);
-    RESULTS_LENGTH++;
+    STACK_INDEX++;
     node.isLeaf = true;
     this.nodes.push(node);
-    leafNodes.set(objectID, node);
+    leafNodes[objectID] = node;
     this.insertNode(node);
-    this.refitAncestors(node);
   }
 
   private insertNode(node: AABBNode): void {
@@ -71,6 +69,7 @@ class AABBTree {
 
     bestLeaf.parent = newParent;
     node.parent = newParent;
+    this.refitAncestors(node);
   }
 
   private findBestLeaf(node: AABBNode): AABBNode {
@@ -156,9 +155,80 @@ class AABBTree {
     }
   }
 
-  query(aabb: Box3): Uint16Array<ArrayBuffer> {
+  private balance(node: AABBNode): AABBNode {
+    if (!node) return node;
+
+    const axis = this.getLongestAxis();
+
+    leafNodes.forEach((l) => {
+      if (node.aabb.containsBox(l.aabb)) {
+        const center = l.aabb.getCenter(v);
+        l.cost = center.getComponent(axis);
+        bestCostCandidates.push(l);
+      }
+    });
+    if (leafNodes.length < 2) return node;
+
+    this.clearTree(node);
+
+    node = this.buildBalancedTree(
+      bestCostCandidates.data,
+      0,
+      bestCostCandidates.length - 1
+    );
+    bestCostCandidates.data.length = 0;
+    bestCostCandidates.length = 0;
+    return node;
+  }
+
+  private clearTree(node: AABBNode): void {
+    if (!node.isLeaf) {
+      this.clearTree(node.left!);
+      this.clearTree(node.right!);
+      freeNodes.push(node);
+      node.reset();
+    }
+  }
+
+  private getLongestAxis(): number {
+    b.makeEmpty();
+    leafNodes.forEach((node) => {
+      b.union(node.aabb);
+    });
+
+    b.getSize(v);
+
+    const { x, y, z } = v;
+    return x > y ? (x > z ? 0 : 2) : y > z ? 1 : 2;
+  }
+
+  private buildBalancedTree(
+    leaves: AABBNode[],
+    start: number,
+    end: number
+  ): AABBNode {
+    if (start > end) return null!;
+    if (start === end) return leaves[start];
+
+    const mid = Math.floor((start + end) / 2);
+
+    let node = freeNodes.pop();
+    if (!node) node = new AABBNode(new Box3());
+
+    node.left = this.buildBalancedTree(leaves, start, mid);
+    node.right = this.buildBalancedTree(leaves, mid + 1, end);
+
+    if (node.left) node.left.parent = node;
+    if (node.right) node.right.parent = node;
+
+    this.refitAncestors(node);
+
+    return node;
+  }
+
+  query(results: Uint16Array, aabb: Box3): number {
     RESULTS_COUNT = 0;
-    if (!this.root) return RESULTS;
+    if (!this.root) return RESULTS_COUNT;
     STACK[0] = this.root;
     STACK_INDEX = 1;
 
@@ -169,7 +239,7 @@ class AABBTree {
       if (aabb.intersectsBox(node.aabb)) {
         if (node.isLeaf) {
           if (!aabb.equals(node.aabb))
-            RESULTS[RESULTS_COUNT++] = node.objectID!;
+            results[RESULTS_COUNT++] = node.objectID!;
         } else {
           STACK[STACK_INDEX++] = node.left!;
           STACK[STACK_INDEX++] = node.right!;
@@ -177,11 +247,11 @@ class AABBTree {
       }
     }
 
-    return RESULTS.slice(0, RESULTS_COUNT);
+    return RESULTS_COUNT;
   }
 
   update(objectID: number, aabb: Box3): void {
-    const node = leafNodes.get(objectID);
+    const node = leafNodes[objectID];
     if (!node) return;
     if (node.parent!.aabb.containsBox(aabb)) {
       return; // No need to update if new AABB is contained in the old one
@@ -190,7 +260,6 @@ class AABBTree {
     this.removeLeaf(node);
     this.insertNode(node);
     this.refitAncestors(node);
-
     this.updateHelpers();
   }
 
