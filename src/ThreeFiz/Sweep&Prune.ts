@@ -1,34 +1,14 @@
-import TinyQueue from "tinyqueue";
 import RigidBody from "./RigidBody";
+import { Box3 } from "three";
 
-interface EndPoint {
-  isStart: boolean;
-  value: number;
-  index: number;
-}
-
-const endpoints: TinyQueue<EndPoint> = new TinyQueue<EndPoint>(
-  [],
-  (a: EndPoint, b: EndPoint) => a.value - b.value
-);
-let endpointsPool: EndPoint[];
-let poolIndex = 0;
 let objects: RigidBody[] = [];
-let activeIndex: Set<number> = new Set();
-let activeHost: boolean;
+let hostAABB: Box3;
+let MatchedIds: Uint16Array;
+let MatchedIndex: number;
 
 export const init = (objs: RigidBody[]) => {
   objects.push(...objs);
-  endpointsPool = Array.from({ length: objs.length * 2 }, () => ({
-    isStart: false,
-    value: 0,
-    index: 0,
-  }));
-};
-
-const getEndpoint = () => {
-  if (poolIndex >= endpointsPool.length) poolIndex = 0;
-  return endpointsPool[poolIndex++];
+  MatchedIds = new Uint16Array(objs.length);
 };
 
 const SweepAndPrune = (
@@ -36,44 +16,17 @@ const SweepAndPrune = (
   others: Uint16Array,
   maxResults: number
 ) => {
-  endpoints.length = 0;
-  endpoints.data.length = 0;
-  activeIndex.clear();
+  hostAABB = objects[hostID].aabb;
+  MatchedIndex = 0;
 
-  sortByAxis(objects[hostID], hostID);
   for (let i = 0; i < maxResults; i++)
-    sortByAxis(objects[others[i]], others[i]);
-  activeHost = false;
+    if (isMatched(objects[others[i]].aabb)) others[MatchedIndex++] = others[i];
 
-  while (endpoints.length > 0) {
-    const obj = endpoints.pop();
-    if (!obj) continue;
-    if (obj.isStart) {
-      if (obj.index === hostID) activeHost = true;
-      else activeIndex.add(obj.index);
-    } else {
-      if (obj.index === hostID) return activeIndex;
-      if (!activeHost) activeIndex.delete(obj.index);
-    }
-  }
-
-  return activeIndex;
+  return MatchedIndex;
 };
 
-const sortByAxis = (obj: RigidBody, id: number) => {
-  const start = getEndpoint();
-  const end = getEndpoint();
-
-  start.isStart = true;
-  start.value = obj.aabb.min.x;
-  start.index = id;
-
-  end.isStart = false;
-  end.value = obj.aabb.max.x;
-  end.index = id;
-
-  endpoints.push(start);
-  endpoints.push(end);
+const isMatched = (aabb: Box3) => {
+  return hostAABB.min.x < aabb.max.x && hostAABB.max.x > aabb.min.x;
 };
 
 export default SweepAndPrune;

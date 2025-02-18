@@ -4,10 +4,11 @@ import World from "./World";
 import RigidBody, { RigidBodyProps } from "./RigidBody";
 import Sphere from "./Sphere";
 import SweepAndPrune, { init as SAPinit } from "./Sweep&Prune";
-import AABBTree from "./AABBTree";
+import AABBTree from "./AABBTree/AABBTree";
 
 const v = new Vector3();
 const tree = new AABBTree();
+let RESULTS: Uint16Array<ArrayBuffer>;
 
 type Props = {
   scene: Scene;
@@ -36,6 +37,10 @@ class ThreeFiz {
     const newObject = new Cuboid(object);
     this.objects.push(newObject);
     this.scene.add(newObject.mesh);
+    newObject.mesh.updateMatrix();
+    newObject.mesh.updateMatrixWorld();
+    newObject.updateAABB();
+    newObject.updateCollider();
     tree.insert(
       newObject.aabb,
       this.objects.length - 1,
@@ -47,17 +52,22 @@ class ThreeFiz {
   addSphere(object: Partial<RigidBodyProps>): void {
     const newObject = new Sphere(object);
     this.objects.push(newObject);
+    this.scene.add(newObject.mesh);
+    newObject.updateAABB();
+    newObject.updateCollider();
     tree.insert(
       newObject.aabb,
       this.objects.length - 1,
       `${newObject.constructor.name}${this.objects.length - 1}`
     );
-    this.scene.add(newObject.mesh);
+    newObject.mesh.position.copy(newObject.getPosition(v));
   }
 
   init(): void {
     this.lastTicks = Date.now();
     this.world.updateObjects(this.objects, tree, 0);
+    const N = this.objects.length;
+    RESULTS = new Uint16Array(N);
     SAPinit(this.objects);
   }
 
@@ -80,35 +90,22 @@ class ThreeFiz {
   onCollision(_object1: RigidBody, _object2: RigidBody): void {}
 
   private detectCollisions(): void {
-    const potentialCollisionsIndexes_tree: Map<number, number[]> = new Map();
+    let objB: RigidBody;
+    let maxResults: number;
     this.objects.forEach((objA, idx) => {
-      const potentialCollisions = tree.query(objA.aabb);
-      potentialCollisions.forEach((j) => {
-        const objB = this.objects[j];
-        if (!objA.isStatic || !objB.isStatic)
-          if (
-            !potentialCollisionsIndexes_tree.has(j) ||
-            !potentialCollisionsIndexes_tree.get(j)!.includes(idx)
-          ) {
-            if (!potentialCollisionsIndexes_tree.has(idx))
-              potentialCollisionsIndexes_tree.set(idx, []);
-            potentialCollisionsIndexes_tree.get(idx)!.push(j);
+      maxResults = tree.query(RESULTS, objA.aabb);
+      maxResults = SweepAndPrune(idx, RESULTS, maxResults);
+      for (let i = 0; i < maxResults; i++) {
+        if (idx < RESULTS[i]) {
+          objB = this.objects[RESULTS[i]];
+          if (!objA.isStatic || !objB.isStatic) {
+            if (objA.intersects(objB)) {
+              objA.resolveCollision(objB);
+              this.onCollision(objA, objB);
+            }
           }
-      });
-    });
-
-    potentialCollisionsIndexes_tree.forEach((v, k) => {
-      const potentialCollisionsIndexes_SAP = SweepAndPrune(k, v);
-
-      potentialCollisionsIndexes_SAP.forEach((indexes) => {
-        const objA = this.objects[indexes[0]];
-        const objB = this.objects[indexes[1]];
-        if (!objA.isStatic || !objB.isStatic)
-          if (objA.intersects(objB)) {
-            objA.resolveCollision(objB);
-            this.onCollision(objA, objB);
-          }
-      });
+        }
+      }
     });
   }
 

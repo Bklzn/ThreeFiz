@@ -1,4 +1,4 @@
-import { Box3, Box3Helper, Color, Scene, Vector3 } from "three";
+import { Box3, Box3Helper, Color, Scene } from "three";
 import TinyQueue from "tinyqueue";
 import AABBNode from "./AABBNode";
 import { calculateEnlargement } from "./utils";
@@ -12,8 +12,6 @@ const bestCostCandidates = new TinyQueue<AABBNode>(
   [],
   (a, b) => a.cost - b.cost
 );
-const b = new Box3();
-const v = new Vector3();
 let n = 0;
 let m = 0;
 const helpers: Box3Helper[] = [];
@@ -29,10 +27,6 @@ class AABBTree {
   constructor(margin: number = DEFAULT_MARGIN) {
     this.root = null;
     this.margin = margin;
-  }
-
-  init() {
-    this.root = this.balance(this.root!);
   }
 
   insert(aabb: Box3, objectID: number, name?: string): void {
@@ -76,7 +70,6 @@ class AABBTree {
     let bestCost = Number.MAX_VALUE;
     let bestNode = this.root!;
 
-    // this.root!.cost = this.root?.surfaceArea ?? bestCost;
     this.root!.cost = calculateEnlargement(bestNode, node.aabb);
     bestCostCandidates.push(bestNode);
 
@@ -155,77 +148,6 @@ class AABBTree {
     }
   }
 
-  private balance(node: AABBNode): AABBNode {
-    if (!node) return node;
-
-    const axis = this.getLongestAxis();
-
-    leafNodes.forEach((l) => {
-      if (node.aabb.containsBox(l.aabb)) {
-        const center = l.aabb.getCenter(v);
-        l.cost = center.getComponent(axis);
-        bestCostCandidates.push(l);
-      }
-    });
-    if (leafNodes.length < 2) return node;
-
-    this.clearTree(node);
-
-    node = this.buildBalancedTree(
-      bestCostCandidates.data,
-      0,
-      bestCostCandidates.length - 1
-    );
-    bestCostCandidates.data.length = 0;
-    bestCostCandidates.length = 0;
-    return node;
-  }
-
-  private clearTree(node: AABBNode): void {
-    if (!node.isLeaf) {
-      this.clearTree(node.left!);
-      this.clearTree(node.right!);
-      freeNodes.push(node);
-      node.reset();
-    }
-  }
-
-  private getLongestAxis(): number {
-    b.makeEmpty();
-    leafNodes.forEach((node) => {
-      b.union(node.aabb);
-    });
-
-    b.getSize(v);
-
-    const { x, y, z } = v;
-    return x > y ? (x > z ? 0 : 2) : y > z ? 1 : 2;
-  }
-
-  private buildBalancedTree(
-    leaves: AABBNode[],
-    start: number,
-    end: number
-  ): AABBNode {
-    if (start > end) return null!;
-    if (start === end) return leaves[start];
-
-    const mid = Math.floor((start + end) / 2);
-
-    let node = freeNodes.pop();
-    if (!node) node = new AABBNode(new Box3());
-
-    node.left = this.buildBalancedTree(leaves, start, mid);
-    node.right = this.buildBalancedTree(leaves, mid + 1, end);
-
-    if (node.left) node.left.parent = node;
-    if (node.right) node.right.parent = node;
-
-    this.refitAncestors(node);
-
-    return node;
-  }
-
   query(results: Uint16Array, aabb: Box3): number {
     RESULTS_COUNT = 0;
     if (!this.root) return RESULTS_COUNT;
@@ -233,17 +155,14 @@ class AABBTree {
     STACK_INDEX = 1;
 
     let node: AABBNode;
-    while (STACK_INDEX > 0) {
+    while (STACK_INDEX !== 0) {
       node = STACK[--STACK_INDEX];
-
-      if (aabb.intersectsBox(node.aabb)) {
-        if (node.isLeaf) {
-          if (!aabb.equals(node.aabb))
-            results[RESULTS_COUNT++] = node.objectID!;
-        } else {
-          STACK[STACK_INDEX++] = node.left!;
-          STACK[STACK_INDEX++] = node.right!;
-        }
+      if (!node.aabb.intersectsBox(aabb)) continue;
+      if (node.isLeaf) {
+        if (!aabb.equals(node.aabb)) results[RESULTS_COUNT++] = node.objectID!;
+      } else {
+        STACK[STACK_INDEX++] = node.left!;
+        STACK[STACK_INDEX++] = node.right!;
       }
     }
 
