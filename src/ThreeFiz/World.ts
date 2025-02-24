@@ -1,6 +1,6 @@
 import { Vector3 } from "three";
 import RigidBody from "./RigidBody";
-import AABBTree from "./AABBTree";
+import AABBTree from "./AABBTree/AABBTree";
 
 class World {
   private gravity: Vector3;
@@ -28,8 +28,10 @@ class World {
         object.updateRotation(dT);
         object.mesh.updateMatrix();
         object.mesh.updateMatrixWorld();
-        object.updateAABB();
-        object.updateCollider();
+        if (object.isMoved) {
+          object.updateAABB();
+          object.updateCollider();
+        }
         AABBTree.update(id, object.aabb);
         object.needsUpdate = false;
       }

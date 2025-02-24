@@ -60,32 +60,22 @@ class Sphere extends RigidBody {
   }
 
   updateAABB() {
-    if (
-      !this.prevPosition.equals(this.position) ||
-      !this.prevRotation.equals(this.rotation)
-    ) {
-      this.aabb.min.set(
-        this.position.x - this.meshGeometry.parameters.radius,
-        this.position.y - this.meshGeometry.parameters.radius,
-        this.position.z - this.meshGeometry.parameters.radius
-      );
+    this.aabb.min.set(
+      this.position.x - this.meshGeometry.parameters.radius,
+      this.position.y - this.meshGeometry.parameters.radius,
+      this.position.z - this.meshGeometry.parameters.radius
+    );
 
-      this.aabb.max.set(
-        this.position.x + this.meshGeometry.parameters.radius,
-        this.position.y + this.meshGeometry.parameters.radius,
-        this.position.z + this.meshGeometry.parameters.radius
-      );
-    }
+    this.aabb.max.set(
+      this.position.x + this.meshGeometry.parameters.radius,
+      this.position.y + this.meshGeometry.parameters.radius,
+      this.position.z + this.meshGeometry.parameters.radius
+    );
   }
 
   updateCollider() {
-    if (
-      !this.prevPosition.equals(this.position) ||
-      !this.prevRotation.equals(this.rotation)
-    ) {
-      this.collider.applyMatrix4(this.mesh.matrixWorld);
-      this.collider.center.copy(this.position);
-    }
+    this.collider.applyMatrix4(this.mesh.matrixWorld);
+    this.collider.center.copy(this.position);
   }
 }
 export default Sphere;
