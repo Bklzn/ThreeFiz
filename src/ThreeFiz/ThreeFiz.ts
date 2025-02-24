@@ -3,9 +3,11 @@ import { Scene, Vector3 } from "three";
 import World from "./World";
 import RigidBody, { RigidBodyProps } from "./RigidBody";
 import Sphere from "./Sphere";
-import SweepAndPrune from "./Sweep&Prune";
+import AABBTree from "./AABBTree/AABBTree";
 
 const v = new Vector3();
+const tree = new AABBTree();
+let RESULTS: Uint16Array<ArrayBuffer>;
 
 type Props = {
   scene: Scene;
@@ -34,6 +36,15 @@ class ThreeFiz {
     const newObject = new Cuboid(object);
     this.objects.push(newObject);
     this.scene.add(newObject.mesh);
+    newObject.mesh.updateMatrix();
+    newObject.mesh.updateMatrixWorld();
+    newObject.updateAABB();
+    newObject.updateCollider();
+    tree.insert(
+      newObject.aabb,
+      this.objects.length - 1,
+      `${newObject.constructor.name}${this.objects.length - 1}`
+    );
     newObject.mesh.position.copy(newObject.getPosition(v));
   }
 
@@ -41,11 +52,21 @@ class ThreeFiz {
     const newObject = new Sphere(object);
     this.objects.push(newObject);
     this.scene.add(newObject.mesh);
+    newObject.updateAABB();
+    newObject.updateCollider();
+    tree.insert(
+      newObject.aabb,
+      this.objects.length - 1,
+      `${newObject.constructor.name}${this.objects.length - 1}`
+    );
+    newObject.mesh.position.copy(newObject.getPosition(v));
   }
 
   init(): void {
     this.lastTicks = Date.now();
-    this.world.updateObjects(this.objects, 0);
+    this.world.updateObjects(this.objects, tree, 0);
+    const N = this.objects.length;
+    RESULTS = new Uint16Array(N);
   }
 
   setGravity(gravity: Vector3): void {
@@ -53,7 +74,7 @@ class ThreeFiz {
   }
 
   private update(dT: number): void {
-    this.world.updateObjects(this.objects, dT);
+    this.world.updateObjects(this.objects, tree, dT);
     this.detectCollisions();
   }
 
@@ -65,16 +86,23 @@ class ThreeFiz {
     this.isPaused = false;
   }
   onCollision(_object1: RigidBody, _object2: RigidBody): void {}
+
   private detectCollisions(): void {
-    const potentialCollisionsIndexes = SweepAndPrune(this.objects);
-    potentialCollisionsIndexes.forEach((indexes) => {
-      const objA = this.objects[indexes[0]];
-      const objB = this.objects[indexes[1]];
-      if (!objA.isStatic || !objB.isStatic)
-        if (objA.intersects(objB)) {
-          objA.resolveCollision(objB);
-          this.onCollision(objA, objB);
+    let objB: RigidBody;
+    let maxResults: number;
+    this.objects.forEach((objA, idx) => {
+      maxResults = tree.query(RESULTS, objA.aabb, idx);
+      for (let i = 0; i < maxResults; i++) {
+        if (idx < RESULTS[i]) {
+          objB = this.objects[RESULTS[i]];
+          if (!objA.isStatic || !objB.isStatic) {
+            if (objA.intersects(objB)) {
+              objA.resolveCollision(objB);
+              this.onCollision(objA, objB);
+            }
+          }
         }
+      }
     });
   }
 

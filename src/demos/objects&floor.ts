@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import * as dat from "three/examples/jsm/libs/lil-gui.module.min.js";
 import ThreeFiz from "../ThreeFiz/ThreeFiz";
 import Stats from "three/examples/jsm/libs/stats.module.js";
 import {
@@ -42,8 +43,8 @@ for (let i = 0; i < 4; i++) {
   });
 }
 
-let boxCount = 30;
-let sphereCount = 30;
+let boxCount = 100;
+let sphereCount = 100;
 
 for (let i = 0; i < boxCount; i++) {
   const w = Math.random() * 10 + 5;
@@ -77,9 +78,14 @@ for (let i = 0; i < sphereCount; i++) {
   sphere.receiveShadow = true;
   threeFiz.addSphere({
     mesh: sphere,
-    position: new THREE.Vector3(Math.random() + 20, 50 + i * r, Math.random()),
+    position: new THREE.Vector3(Math.random(), 10 + r * i, Math.random()),
   });
 }
+
+// threeFiz.objects.forEach((obj) => {
+//   obj.debug = new Debug(obj);
+//   obj.debug.showAABB = { color: new THREE.Color("red") };
+// });
 
 threeFiz.init();
 
@@ -87,6 +93,31 @@ threeFiz.init();
 const stats = new Stats();
 stats.dom.style.setProperty("position", "absolute");
 stats.dom.style.setProperty("top", "0");
+
+const buttons = {
+  pauseOnCollision: false,
+  start: () => threeFiz.resume(),
+
+  pause: () => threeFiz.pause(),
+};
+const onCollisionInit = (value: boolean) => {
+  if (value) {
+    threeFiz.onCollision = () => {
+      threeFiz.pause();
+    };
+    threeFiz.pause();
+  } else {
+    threeFiz.onCollision = () => {
+      threeFiz.resume();
+    };
+    threeFiz.resume();
+  }
+};
+onCollisionInit(buttons.pauseOnCollision);
+const gui = new dat.GUI();
+gui.add(buttons, "pauseOnCollision").onChange(onCollisionInit);
+gui.add(buttons, "start");
+gui.add(buttons, "pause");
 
 document.body.appendChild(stats.dom);
 controls.update();

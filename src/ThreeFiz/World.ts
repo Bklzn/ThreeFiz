@@ -1,5 +1,6 @@
 import { Vector3 } from "three";
 import RigidBody from "./RigidBody";
+import AABBTree from "./AABBTree/AABBTree";
 
 class World {
   private gravity: Vector3;
@@ -18,8 +19,8 @@ class World {
     );
   }
 
-  updateObjects(objects: RigidBody[], dT: number): void {
-    objects.forEach((object) => {
+  updateObjects(objects: RigidBody[], AABBTree: AABBTree, dT: number): void {
+    objects.forEach((object, id) => {
       if (!object.isStatic) object.needsUpdate = true;
       if (object.needsUpdate) {
         this.applyGravity(object, dT);
@@ -31,6 +32,7 @@ class World {
           object.updateAABB();
           object.updateCollider();
         }
+        AABBTree.update(id, object.aabb);
         object.needsUpdate = false;
       }
       object.debug.update();

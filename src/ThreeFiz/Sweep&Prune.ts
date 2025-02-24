@@ -1,57 +1,32 @@
 import RigidBody from "./RigidBody";
+import { Box3 } from "three";
 
-interface EndPoint {
-  isStart: boolean;
-  value: number;
-  index: number;
-}
+let objects: RigidBody[] = [];
+let hostAABB: Box3;
+let MatchedIds: Uint16Array;
+let MatchedIndex: number;
 
-const SweepAndPrune = (objects: RigidBody[]) => {
-  const potentialCollisionsOnX_Indexes = new Set<number[]>();
-  const potentialCollisionsIndexes = new Set<number[]>();
-  const sortedObjects = sortByXAxis(objects);
-  const activeIndex = new Set<number>();
-  for (const obj of sortedObjects) {
-    if (obj.isStart) {
-      for (const id of activeIndex) {
-        potentialCollisionsOnX_Indexes.add([
-          Math.min(id, obj.index),
-          Math.max(id, obj.index),
-        ]);
-      }
-      activeIndex.add(obj.index);
-    } else activeIndex.delete(obj.index);
-  }
-
-  for (const pair of potentialCollisionsOnX_Indexes) {
-    const [i, j] = pair;
-    if (checkYAxisCollision(objects[i], objects[j])) {
-      potentialCollisionsIndexes.add(pair);
-    }
-  }
-
-  return Array.from(potentialCollisionsIndexes).map((pair) => [
-    pair[0],
-    pair[1],
-  ]);
+export const init = (objs: RigidBody[]) => {
+  objects.push(...objs);
+  MatchedIds = new Uint16Array(objs.length);
 };
 
-const sortByXAxis = (objects: RigidBody[]) => {
-  const endpoints: EndPoint[] = [];
+const SweepAndPrune = (
+  hostID: number,
+  others: Uint16Array,
+  maxResults: number
+) => {
+  hostAABB = objects[hostID].aabb;
+  MatchedIndex = 0;
 
-  for (let i = 0; i < objects.length; i++) {
-    const obj = objects[i];
-    endpoints.push({ isStart: true, value: obj.aabb.min.x, index: i });
-    endpoints.push({ isStart: false, value: obj.aabb.max.x, index: i });
-  }
+  for (let i = 0; i < maxResults; i++)
+    if (isMatched(objects[others[i]].aabb)) others[MatchedIndex++] = others[i];
 
-  return endpoints.sort((a, b) => a.value - b.value);
+  return MatchedIndex;
 };
 
-const checkYAxisCollision = (obj1: RigidBody, obj2: RigidBody) => {
-  return (
-    obj1.aabb.min.y <= obj2.aabb.max.y && obj1.aabb.max.y >= obj2.aabb.min.y
-  );
+const isMatched = (aabb: Box3) => {
+  return hostAABB.min.x < aabb.max.x && hostAABB.max.x > aabb.min.x;
 };
 
 export default SweepAndPrune;
