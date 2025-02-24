@@ -82,10 +82,16 @@ for (let i = 0; i < sphereCount; i++) {
   });
 }
 
-// threeFiz.objects.forEach((obj) => {
-//   obj.debug = new Debug(obj);
-//   obj.debug.showAABB = { color: new THREE.Color("red") };
-// });
+const resetObjectrs = () => {
+  threeFiz.objects.map((obj) => {
+    if (obj.position.y < -100) {
+      obj.setPosition(
+        () => new THREE.Vector3(Math.random(), 200, Math.random())
+      );
+      obj.setVelocity(() => new THREE.Vector3(0, 0, 0));
+    }
+  });
+};
 
 threeFiz.init();
 
@@ -125,6 +131,7 @@ const loop = () => {
   controls.update();
   stats.update();
   threeFiz.step();
+  resetObjectrs();
   renderer.render(scene, camera);
   requestAnimationFrame(loop);
 };
