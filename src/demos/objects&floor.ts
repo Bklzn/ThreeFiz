@@ -9,7 +9,6 @@ import {
   scene,
   createCheckerboardTexture,
 } from "./init";
-import Debug from "../ThreeFiz/Debug";
 
 camera.position.set(0, 100, 200);
 
@@ -30,22 +29,22 @@ floorEdge.receiveShadow = true;
 const threeFiz = new ThreeFiz({ scene });
 threeFiz.addBox({ mesh: floor, isStatic: true });
 
-// for (let i = 0; i < 4; i++) {
-//   const pos = 100 - 5 / 2;
-//   const x = Math.sin((Math.PI * i) / 2);
-//   const z = Math.cos((Math.PI * i) / 2);
-//   threeFiz.addBox({
-//     mesh: floorEdge.clone(),
-//     position: new THREE.Vector3(pos * x, 7.5, -pos * z),
-//     rotation: new THREE.Quaternion().setFromEuler(
-//       new THREE.Euler(0, (x * Math.PI) / 2, 0)
-//     ),
-//     isStatic: true,
-//   });
-// }
+for (let i = 0; i < 4; i++) {
+  const pos = 100 - 5 / 2;
+  const x = Math.sin((Math.PI * i) / 2);
+  const z = Math.cos((Math.PI * i) / 2);
+  threeFiz.addBox({
+    mesh: floorEdge.clone(),
+    position: new THREE.Vector3(pos * x, 7.5, -pos * z),
+    rotation: new THREE.Quaternion().setFromEuler(
+      new THREE.Euler(0, (x * Math.PI) / 2, 0)
+    ),
+    isStatic: true,
+  });
+}
 
-let boxCount = 0;
-let sphereCount = 300;
+let boxCount = 100;
+let sphereCount = 100;
 
 for (let i = 0; i < boxCount; i++) {
   const w = Math.random() * 10 + 5;
@@ -79,11 +78,7 @@ for (let i = 0; i < sphereCount; i++) {
   sphere.receiveShadow = true;
   threeFiz.addSphere({
     mesh: sphere,
-    position: new THREE.Vector3(
-      Math.random() * 200 - 100,
-      15,
-      Math.random() * 200 - 100
-    ),
+    position: new THREE.Vector3(Math.random(), 10 + r * i, Math.random()),
   });
 }
 
@@ -100,7 +95,7 @@ stats.dom.style.setProperty("position", "absolute");
 stats.dom.style.setProperty("top", "0");
 
 const buttons = {
-  pauseOnCollision: true,
+  pauseOnCollision: false,
   start: () => threeFiz.resume(),
 
   pause: () => threeFiz.pause(),
