@@ -13,6 +13,7 @@ class AABBNode {
   objectID: number | null = null;
   height: number = 0;
   cost = -1;
+  biggestIncludedObjectId: number = -1;
   isLeaf = false;
   surfaceArea = 0;
 
@@ -22,6 +23,7 @@ class AABBNode {
     this.parent = parent ?? null;
     this.objectID = objectID ?? null;
     this.calculateSurfaceArea();
+    this.biggestIncludedObjectId = objectID ?? -1;
   }
   calculateSurfaceArea() {
     this.surfaceArea = calculateSurfaceArea(this.aabb);
@@ -45,6 +47,13 @@ class AABBNode {
     else this.rightEnlargement = enlargement;
   }
 
+  fillInclludedLeafs(): void {
+    if (this.isLeaf) return;
+    let right = this.right!.biggestIncludedObjectId;
+    let left = this.left!.biggestIncludedObjectId;
+    this.biggestIncludedObjectId = Math.max(right, left);
+  }
+
   reset() {
     this.parent = null;
     this.left = null;
@@ -52,6 +61,7 @@ class AABBNode {
     this.height = 0;
     this.cost = -1;
     this.surfaceArea = 0;
+    this.biggestIncludedObjectId = -1;
   }
 }
 

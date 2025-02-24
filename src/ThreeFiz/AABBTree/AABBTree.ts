@@ -140,6 +140,7 @@ class AABBTree {
         current.calculateAABB(this.margin);
 
         current.calculateEnlargement(childAABB);
+        current.fillInclludedLeafs();
       }
       current.calculateSurfaceArea();
 
@@ -148,7 +149,7 @@ class AABBTree {
     }
   }
 
-  query(results: Uint16Array, aabb: Box3): number {
+  query(results: Uint16Array, aabb: Box3, objectID: number): number {
     RESULTS_COUNT = 0;
     if (!this.root) return RESULTS_COUNT;
     STACK[0] = this.root;
@@ -157,9 +158,10 @@ class AABBTree {
     let node: AABBNode;
     while (STACK_INDEX !== 0) {
       node = STACK[--STACK_INDEX];
+      if (objectID >= node.biggestIncludedObjectId) continue;
       if (!node.aabb.intersectsBox(aabb)) continue;
       if (node.isLeaf) {
-        if (!aabb.equals(node.aabb)) results[RESULTS_COUNT++] = node.objectID!;
+        results[RESULTS_COUNT++] = node.objectID!;
       } else {
         STACK[STACK_INDEX++] = node.left!;
         STACK[STACK_INDEX++] = node.right!;
