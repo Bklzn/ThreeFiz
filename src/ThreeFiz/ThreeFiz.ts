@@ -3,7 +3,6 @@ import { Scene, Vector3 } from "three";
 import World from "./World";
 import RigidBody, { RigidBodyProps } from "./RigidBody";
 import Sphere from "./Sphere";
-import SweepAndPrune, { init as SAPinit } from "./Sweep&Prune";
 import AABBTree from "./AABBTree/AABBTree";
 
 const v = new Vector3();
@@ -68,7 +67,6 @@ class ThreeFiz {
     this.world.updateObjects(this.objects, tree, 0);
     const N = this.objects.length;
     RESULTS = new Uint16Array(N);
-    SAPinit(this.objects);
   }
 
   setGravity(gravity: Vector3): void {
@@ -93,8 +91,7 @@ class ThreeFiz {
     let objB: RigidBody;
     let maxResults: number;
     this.objects.forEach((objA, idx) => {
-      maxResults = tree.query(RESULTS, objA.aabb);
-      maxResults = SweepAndPrune(idx, RESULTS, maxResults);
+      maxResults = tree.query(RESULTS, objA.aabb, idx);
       for (let i = 0; i < maxResults; i++) {
         if (idx < RESULTS[i]) {
           objB = this.objects[RESULTS[i]];
