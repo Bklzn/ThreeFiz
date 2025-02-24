@@ -93,6 +93,13 @@ abstract class RigidBody {
     depth: number;
   };
 
+  get isMoved() {
+    return (
+      !this.prevPosition.equals(this.position) ||
+      !this.prevRotation.equals(this.rotation)
+    );
+  }
+
   updatePosition(dT: number) {
     this.prevPosition.copy(this.position);
     this.position.add(v.copy(this.velocity).multiplyScalar(dT));

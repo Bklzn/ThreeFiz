@@ -27,8 +27,10 @@ class World {
         object.updateRotation(dT);
         object.mesh.updateMatrix();
         object.mesh.updateMatrixWorld();
-        object.updateAABB();
-        object.updateCollider();
+        if (object.isMoved) {
+          object.updateAABB();
+          object.updateCollider();
+        }
         object.needsUpdate = false;
       }
       object.debug.update();
