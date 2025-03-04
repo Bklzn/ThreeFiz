@@ -19,11 +19,9 @@
     "eslint": "^9.8.0",
     "gh-pages": "^6.3.0",
     "three": "^0.170.0",
+    "threefiz": "^0.5.0",
     "tinyqueue": "^3.0.0",
     "typescript": "^5.2.2",
     "vite": "^5.3.4"
-  },
-  "dependencies": {
-    "three-mesh-bvh": "^0.8.3"
   }
 }

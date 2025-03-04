@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import ThreeFiz from "../ThreeFiz/ThreeFiz";
+import ThreeFiz from "threefiz";
 import Stats from "three/examples/jsm/libs/stats.module.js";
 import {
   camera,

@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import ThreeFiz from "../ThreeFiz/ThreeFiz";
+import ThreeFiz from "threefiz";
 import * as dat from "three/examples/jsm/libs/lil-gui.module.min.js";
 import Stats from "three/examples/jsm/libs/stats.module.js";
 import {
