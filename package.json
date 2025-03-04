@@ -3,7 +3,16 @@
   "version": "0.5.0",
   "type": "module",
   "scripts": {
+    "build": "tsc",
     "test": "echo \"Error: no test specified\""
+  },
+  "description": "Implementation of a physics engine based on the [Three.js](https://github.com/mrdoob/three.js) library.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "dependencies": {
+    "fflate": "^0.8.2",
+    "meshoptimizer": "^0.18.1",
+    "undici-types": "^6.20.0"
   },
   "devDependencies": {
     "@types/node": "^22.1.0",
@@ -11,5 +20,18 @@
     "three": "^0.170.0",
     "tinyqueue": "^3.0.0",
     "typescript": "^5.2.2"
-  }
+  },
+  "keywords": [
+    "three.js",
+    "physics",
+    "3D",
+    "rigid",
+    "bodies"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Bklzn/ThreeFiz.git"
+  },
+  "author": "Bklzn",
+  "license": "MIT"
 }
