@@ -6,7 +6,7 @@ Implementation of a physics engine based on the [Three.js](https://github.com/mr
 
 ### Installation
 
-- Copy content of **_three_** folder to the **main folder** of Three.js library
+> npm i threefiz
 
 ### Features
 
@@ -19,44 +19,40 @@ Implementation of a physics engine based on the [Three.js](https://github.com/mr
 
 ### Example
 
-This example creates a three.js environment and then adds a perpendicular and a sphere. The Grabber object is used to move the object with the mouse.
+This example creates a three.js environment and then adds a perpendicular and a sphere
 
 ```js
 import * as THREE from "three";
-import { OrbitControls } from "./threejs/examples/jsm/controls/OrbitControls.js";
-
-import ThreeFiz from "./threejs/ThreeFiz/ThreeFiz.js";
-import Grabber from "./threejs/THreeFiz/Grabber.js";
+import ThreeFiz from "threefiz";
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(
-  75,
+  45,
   window.innerWidth / window.innerHeight,
-  0.1,
-  1000
+  1,
+  10000
 );
 
 const renderer = new THREE.WebGLRenderer();
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
-let controls = new OrbitControls(camera, renderer.domElement);
-
-const light = new THREE.PointLight(0xffffff, 1);
+const light = new THREE.DirectionalLight(0xffffff, 3);
 
 const geometry = new THREE.SphereGeometry(1);
 const material = new THREE.MeshPhongMaterial({ color: 0x0000ff });
 const sphere = new THREE.Mesh(geometry, material);
 
-const floorGeometry = new THREE.BoxGeometry(1000, 0.1, 1000);
+const floorGeometry = new THREE.BoxGeometry(10, 1, 10);
 const floorMaterial = new THREE.MeshPhongMaterial({ color: 0xff0000 });
 const floor = new THREE.Mesh(floorGeometry, floorMaterial);
-const physic = new ThreeFiz(scene);
+const physic = new ThreeFiz({ scene });
 physic.addSphere({
   mesh: sphere,
   mass: 10,
   restitution: 0.2,
   isStatic: false,
+  position: new THREE.Vector3(0, 20, 0),
 });
 
 physic.addBox({
@@ -68,16 +64,13 @@ physic.addBox({
 
 physic.init();
 
-physic.boxes[0].position.y = -3;
-
 scene.add(light);
 
-camera.position.z = 10;
-light.position.set(5, 5, 5);
+camera.position.set(0, 10, 50);
+light.position.set(500, 500, 500);
 
 let animate = () => {
-  controls.update();
-  physic.update();
+  physic.step();
   renderer.render(scene, camera);
   requestAnimationFrame(animate);
 };
