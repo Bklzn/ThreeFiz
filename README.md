@@ -4,6 +4,8 @@ Implementation of a physics engine based on the [Three.js](https://github.com/mr
 
 ### [Demo](https://bklzn.github.io/ThreeFiz/)
 
+![demo](./objects&floor.gif)
+
 ### Installation
 
 > npm i threefiz
