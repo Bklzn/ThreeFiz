@@ -6,12 +6,12 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main: "index.html",
-        twoSpheres: "demos/twoSpheres.html",
-        twoBlocks: "demos/twoBlocks.html",
-        blockSphere: "demos/block&sphere.html",
-        blockFloor: "demos/block&floor.html",
+        cannon: "demos/cannon.html",
         objectsFloor: "demos/objects&floor.html",
         frictionTest: "demos/fricitionTest.html",
+      },
+      output: {
+        assetFileNames: "assets/[name].[ext]",
       },
     },
   },
