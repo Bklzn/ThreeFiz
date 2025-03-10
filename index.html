@@ -7,18 +7,66 @@
     <title>ThreeFiz Hub</title>
     <style>
       body {
-        background-color: gray;
+        background-color: lightgray;
+        margin: 0;
+        font-family: sans-serif;
+      }
+      #app {
+        display: flex; 
+        flex-direction:row; 
+        height:100vh; 
+        width:100%; 
+        justify-content:space-around; 
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      #app a {
+        text-align: center;
+        text-decoration: none;
+      }
+      #app a span {
+        font-size:2em;
+        color:black;
+      }
+      #app a div {
+        border: 3px solid gray;
+        border-radius: 16px;
+        overflow: hidden;
+      }
+      #app a div img {
+        filter: blur(3px);
+        width: max(20vw, 300px);
+        transition: all .1s ease-in-out;
+      }
+      #app a:hover div img {
+        filter: blur(0px);
+        transition: all .1s ease-in-out;
       }
     </style>
   </head>
   <body>
-    <div id="app" style="display: flex; flex-direction:column">
-      <a href="./demos/twoSpheres.html">Two spheres</a>
-      <a href="./demos/twoBlocks.html">Two blocks</a>
-      <a href="./demos/block&sphere.html">Block & sphere</a>
-      <a href="./demos/block&floor.html">Block & floor</a>
-      <a href="./demos/objects&floor.html">Objects & floor</a>
-      <a href="./demos/fricitionTest.html">Fricition test</a>
+    <div id="app">
+      <a href="./demos/objects&floor.html">
+        <div><img src="/ThreeFiz/assets/objects_floor-EwalvWMM.png" /></div>
+        <span>Objects & floor</span>
+      </a>
+      <a href="./demos/fricitionTest.html">
+        <div><img src="/ThreeFiz/assets/frictionTest-DMmMIF2A.png" /></div>
+        <span>Fricition test</span></a>
+      <a href="./demos/cannon.html">
+        <div><img src="/ThreeFiz/assets/cannon-B5Gamt3j.png" /></div>
+      <span>Cannon</span></a>
     </div>
   </body>
+  <script>
+    document.querySelectorAll("a").forEach(a => {
+      const img = a.querySelector("img");
+      a.addEventListener("mouseenter", () => {
+        img.src = img.src.replace(".png", ".gif");
+      });
+      a.addEventListener("mouseleave", () => {
+        img.src = img.src.replace(".gif", ".png");
+      });
+    });
+  </script>
 </html>
